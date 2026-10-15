@@ -205,6 +205,19 @@ def run_command(client, name, **payload):
     return client.post("command", body)
 
 
+def set_monitored_seasons(client, series_id, seasons_to_monitor):
+    """Monitor exactly the given seasons of a series already in Sonarr.
+
+    Sonarr cascades the season flags to their episodes, which is what makes
+    those episodes grabbable.
+    """
+    series = client.get(f"series/{series_id}") or {}
+    client.put(
+        f"series/{series_id}",
+        {**series, "seasons": mark_seasons(series, seasons_to_monitor)},
+    )
+
+
 def queue_search(client, series_id, season_number=None):
     """Queue a search for the missing episodes of a series or one season."""
     if season_number is None:
@@ -258,19 +271,22 @@ def _add_tv(client, tvdb_id, tmdb_id, title, season_number, search):
         "searchForMissingEpisodes": False,
     }
 
-    if season_number is None:
-        seasons_to_monitor = {season["seasonNumber"] for season in info["seasons"]}
-        message = f"{title} was added to {PROVIDER}."
-    else:
-        seasons_to_monitor = {season_number}
-        message = f"{title} season {season_number} was added to {PROVIDER}."
-
-    info["seasons"] = mark_seasons(info, seasons_to_monitor)
     created = client.post("series", info)
     series_id = (created or {}).get("id")
     if not series_id:
         msg = f"{PROVIDER} did not return a series id for {title}."
         raise ArrError(msg)
+
+    if season_number is None:
+        # "all" monitors every season but the specials, and Sonarr cascades
+        # that to the episodes, so the show can be grabbed.
+        message = f"{title} was added to {PROVIDER}."
+    else:
+        # Sonarr's monitor presets cannot express "only this season", so the
+        # season flags are applied explicitly afterwards. The add alone leaves
+        # the episodes unmonitored, which would prevent any grab.
+        message = f"{title} season {season_number} was added to {PROVIDER}."
+        set_monitored_seasons(client, series_id, {season_number})
 
     if search:
         queue_search(client, series_id, season_number)

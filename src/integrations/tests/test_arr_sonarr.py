@@ -31,6 +31,19 @@ EXISTING_SERIES = {
     ],
 }
 
+# What Sonarr returns when the show was added with addOptions.monitor="none".
+CREATED_SERIES = {
+    "id": 42,
+    "title": "Breaking Bad",
+    "tvdbId": 81189,
+    "tmdbId": 1396,
+    "seasons": [
+        {"seasonNumber": 0, "monitored": False},
+        {"seasonNumber": 1, "monitored": False},
+        {"seasonNumber": 2, "monitored": False},
+    ],
+}
+
 SONARR_SETTINGS = {
     "SONARR_ENABLED": True,
     "SONARR_URL": "http://sonarr.test",
@@ -79,6 +92,8 @@ def fresh_client(extra=None):
     responses = {
         "series": [],
         ("POST", "series"): {"id": 42},
+        ("GET", "series/42"): CREATED_SERIES,
+        ("GET", "series/7"): EXISTING_SERIES,
         "series/lookup": [LOOKUP_RESULT],
         "qualityprofile": [{"id": 2, "name": "HD - 720p/1080p"}],
         "rootfolder": [{"id": 1, "path": "/tv"}],
@@ -114,7 +129,11 @@ class SonarrAddTvTest(TestCase):
         self.assertIn("not configured", result.message)
 
     def test_add_series_all_seasons_monitored(self):
-        """A whole series is added with every season monitored."""
+        """A whole series is added trusting Sonarr's own "all" preset.
+
+        The preset monitors every season but the specials and Sonarr cascades
+        it to the episodes, so no follow up call is needed.
+        """
         fake = fresh_client()
         result = self.add_tv(fake, tvdb_id=81189, tmdb_id=1396, title="Breaking Bad")
 
@@ -126,12 +145,18 @@ class SonarrAddTvTest(TestCase):
         payload = payloads[0]
         self.assertEqual(payload["qualityProfileId"], 2)
         self.assertEqual(payload["rootFolderPath"], "/tv")
+        self.assertTrue(payload["monitored"])
         self.assertEqual(payload["addOptions"]["monitor"], "all")
         self.assertFalse(payload["addOptions"]["searchForMissingEpisodes"])
-        self.assertTrue(all(season["monitored"] for season in payload["seasons"]))
+
+        self.assertEqual(fake.requests_for("PUT", "series/42"), [])
 
     def test_add_single_season_only_monitors_that_season(self):
-        """The season action adds the show with only that season monitored."""
+        """The season action adds with nothing monitored, then selects it.
+
+        The follow up PUT is what makes the episodes of that season monitored,
+        otherwise Sonarr would have nothing to grab.
+        """
         fake = fresh_client()
         result = self.add_tv(
             fake,
@@ -144,9 +169,14 @@ class SonarrAddTvTest(TestCase):
         self.assertEqual(result.outcome, sonarr.OUTCOME_ADDED)
         self.assertIn("season 2", result.message)
 
-        payload = fake.requests_for("POST", "series")[0]
-        self.assertEqual(payload["addOptions"]["monitor"], "none")
-        monitored = [s["seasonNumber"] for s in payload["seasons"] if s["monitored"]]
+        added = fake.requests_for("POST", "series")[0]
+        self.assertEqual(added["addOptions"]["monitor"], "none")
+        self.assertFalse(added["addOptions"]["searchForMissingEpisodes"])
+
+        puts = fake.requests_for("PUT", "series/42")
+        self.assertEqual(len(puts), 1)
+
+        monitored = [s["seasonNumber"] for s in puts[0]["seasons"] if s["monitored"]]
         self.assertEqual(monitored, [2])
 
     def test_search_flag_queues_series_search(self):
