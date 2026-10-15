@@ -98,6 +98,11 @@ def resolve_quality_profile(client):
     raise ArrError(msg)
 
 
+def _normalize_path(path):
+    """Normalize a folder path for comparison (slash style, trailing slash)."""
+    return str(path).replace("\\", "/").rstrip("/").casefold()
+
+
 def resolve_root_folder(client):
     """Return the configured root folder path, defaulting to the first one."""
     folders = root_folders(client)
@@ -105,13 +110,13 @@ def resolve_root_folder(client):
         msg = f"{PROVIDER} has no root folders configured."
         raise ArrError(msg)
 
-    value = str(settings.SONARR_ROOT_FOLDER or "").strip().rstrip("/")
+    value = str(settings.SONARR_ROOT_FOLDER or "").strip()
     if not value:
-        return folders[0]["path"].rstrip("/")
+        return folders[0]["path"]
 
     for folder in folders:
-        if folder["path"].rstrip("/").casefold() == value.casefold():
-            return folder["path"].rstrip("/")
+        if _normalize_path(folder["path"]) == _normalize_path(value):
+            return folder["path"]
 
     paths = ", ".join(folder["path"] for folder in folders)
     msg = f"Root folder {value!r} was not found in {PROVIDER}. Available: {paths}."

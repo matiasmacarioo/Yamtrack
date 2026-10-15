@@ -325,6 +325,17 @@ class SonarrConfigTest(TestCase):
         with override_settings(**{**SONARR_SETTINGS, "SONARR_ROOT_FOLDER": ""}):
             self.assertEqual(sonarr.resolve_root_folder(fake), "/tv")
 
+    def test_windows_root_folder_matches_any_slash_style(self):
+        """A Windows root folder matches regardless of slash direction."""
+        fake = FakeClient({"rootfolder": [{"id": 7, "path": "D:\\Series"}]})
+        settings = {**SONARR_SETTINGS, "SONARR_ROOT_FOLDER": "d:/series/"}
+        with override_settings(**settings):
+            self.assertEqual(sonarr.resolve_root_folder(fake), "D:\\Series")
+
+        settings = {**SONARR_SETTINGS, "SONARR_ROOT_FOLDER": "D:\\Series"}
+        with override_settings(**settings):
+            self.assertEqual(sonarr.resolve_root_folder(fake), "D:\\Series")
+
     def test_configured_root_folder_must_exist(self):
         """A configured root folder that Sonarr does not know errors out."""
         fake = FakeClient({"rootfolder": [{"id": 1, "path": "/tv"}]})
