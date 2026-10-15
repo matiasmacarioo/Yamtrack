@@ -30,7 +30,7 @@ class ApiKeyAuthentication(BaseAuthentication):
         if len(auth) == _BEARER_PARTS and auth[0].lower() == b"bearer":
             key = auth[1].decode()
         else:
-            key = request.META.get("HTTP_X_API_KEY")
+            key = request.headers.get("x-api-key")
         if not key:
             return None
 

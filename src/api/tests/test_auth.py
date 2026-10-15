@@ -25,8 +25,7 @@ class AuthTest(TestCase):
     def test_api_key_bearer_authenticates(self):
         """A user's static API token authorizes requests as that user."""
         response = self.client.get(
-            "/api/auth/me/",
-            HTTP_AUTHORIZATION=f"Bearer {self.user.token}",
+            "/api/auth/me/", headers={"authorization": f"Bearer {self.user.token}"}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], "test@example.com")
@@ -34,8 +33,7 @@ class AuthTest(TestCase):
     def test_api_key_x_header_authenticates(self):
         """The X-API-Key header also authorizes requests."""
         response = self.client.get(
-            "/api/auth/me/",
-            HTTP_X_API_KEY=self.user.token,
+            "/api/auth/me/", headers={"x-api-key": self.user.token}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], "test@example.com")
@@ -43,8 +41,7 @@ class AuthTest(TestCase):
     def test_invalid_api_key_rejected(self):
         """An unknown API key is rejected with 401."""
         response = self.client.get(
-            "/api/auth/me/",
-            HTTP_AUTHORIZATION="Bearer not-a-real-key",
+            "/api/auth/me/", headers={"authorization": "Bearer not-a-real-key"}
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -57,8 +54,7 @@ class AuthTest(TestCase):
             password=otherpass,
         )
         response = self.client.get(
-            "/api/auth/me/",
-            HTTP_AUTHORIZATION=f"Bearer {self.user.token}",
+            "/api/auth/me/", headers={"authorization": f"Bearer {self.user.token}"}
         )
         self.assertEqual(response.data["email"], "test@example.com")
         self.assertNotEqual(response.data["email"], other.email)
