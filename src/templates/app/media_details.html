@@ -382,9 +382,7 @@
                   x-data="{ loading: false }"
                   @submit="loading = true">
               {% csrf_token %}
-              <input type="hidden"
-                     name="next"
-                     value="{{ request.get_full_path|urlencode }}">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
               <button type="submit"
                       class="w-full flex items-center gap-x-3 px-4 py-3 text-sm text-gray-200 hover:bg-[#343a40] transition-colors duration-200 cursor-pointer disabled:opacity-75"
                       :disabled="loading">

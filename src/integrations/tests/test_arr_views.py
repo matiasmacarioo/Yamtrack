@@ -7,6 +7,15 @@ from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from app.models import (
+    TV,
+    Item,
+    MediaTypes,
+    Movie,
+    Season,
+    Sources,
+    Status,
+)
 from app.providers.services import ProviderAPIError
 from integrations.arr import sonarr
 
@@ -388,3 +397,131 @@ class SonarrTemplateTest(TestCase):
         content = response.content.decode()
         self.assertIn('name="search"', content)
         self.assertIn("checked", content)
+
+
+@override_settings(**SONARR_SETTINGS)
+class SonarrHomeGridTest(TestCase):
+    """The home grid trades the history button for a Sonarr action on TV."""
+
+    def setUp(self):
+        """Log a user in and keep the season auto-creation quiet."""
+        credentials = {
+            "username": "testuser",
+            "email": "test@test.com",
+            "password": "testpass",
+        }
+        self.user = get_user_model().objects.create_user(**credentials)
+        self.client.force_login(self.user)
+
+        def fake_metadata(media_type, *_args, **_kwargs):
+            """Return just enough metadata for the model save hooks."""
+            if media_type == MediaTypes.TV.value:
+                return {
+                    "title": "Breaking Bad",
+                    "image": "http://example.com/image.jpg",
+                    "details": {"seasons": 2},
+                    "related": {"seasons": []},
+                    "max_progress": 99,
+                }
+            return {
+                "title": "Test Movie",
+                "image": "http://example.com/image.jpg",
+                "max_progress": 99,
+            }
+
+        metadata_patcher = patch(
+            "app.models.providers.services.get_media_metadata",
+            side_effect=fake_metadata,
+        )
+        metadata_patcher.start()
+        self.addCleanup(metadata_patcher.stop)
+
+    def track_season(self, media_id, season_number):
+        """Track one season of a show, in progress."""
+        tv_item = Item.objects.create(
+            media_id=media_id,
+            source=Sources.TMDB.value,
+            media_type=MediaTypes.TV.value,
+            title="Breaking Bad",
+            image="http://example.com/image.jpg",
+        )
+        tv = TV.objects.create(
+            item=tv_item,
+            user=self.user,
+            status=Status.IN_PROGRESS.value,
+        )
+
+        season_item = Item.objects.create(
+            media_id=media_id,
+            source=Sources.TMDB.value,
+            media_type=MediaTypes.SEASON.value,
+            title="Breaking Bad",
+            image="http://example.com/image.jpg",
+            season_number=season_number,
+        )
+        Season.objects.create(
+            item=season_item,
+            user=self.user,
+            related_tv=tv,
+            status=Status.IN_PROGRESS.value,
+        )
+
+    def track_movie(self, media_id):
+        """Track a movie, in progress."""
+        movie_item = Item.objects.create(
+            media_id=media_id,
+            source=Sources.TMDB.value,
+            media_type=MediaTypes.MOVIE.value,
+            title="Test Movie",
+            image="http://example.com/image.jpg",
+        )
+        Movie.objects.create(
+            item=movie_item,
+            user=self.user,
+            status=Status.IN_PROGRESS.value,
+        )
+
+    def home_content(self):
+        """Render the home page and return its HTML."""
+        response = self.client.get(reverse("home"))
+        self.assertEqual(response.status_code, 200)
+        return response.content.decode()
+
+    def test_season_is_offered_to_sonarr_with_search(self):
+        """An in-progress season gets the season action, searching on add."""
+        self.track_season(media_id="1396", season_number=2)
+
+        content = self.home_content()
+
+        self.assertIn(
+            reverse(
+                "sonarr_add_tv_season",
+                kwargs={
+                    "source": Sources.TMDB.value,
+                    "media_id": "1396",
+                    "season_number": 2,
+                },
+            ),
+            content,
+        )
+        self.assertEqual(content.count('name="search" value="true"'), 1)
+        self.assertNotIn("View your activity history", content)
+
+    def test_other_media_types_keep_the_history_button(self):
+        """Movies have no Sonarr equivalent, so they keep their history button."""
+        self.track_movie(media_id="603")
+
+        content = self.home_content()
+
+        self.assertIn("View your activity history", content)
+        self.assertNotIn("/sonarr/add/", content)
+
+    def test_disabled_sonarr_keeps_the_history_button(self):
+        """Without Sonarr the TV cards keep their history button."""
+        self.track_season(media_id="1396", season_number=2)
+
+        with override_settings(SONARR_ENABLED=False):
+            content = self.home_content()
+
+        self.assertIn("View your activity history", content)
+        self.assertNotIn("/sonarr/add/", content)

@@ -316,6 +316,28 @@ def media_url(media):
 
 
 @register.simple_tag
+def sonarr_add_url(media):
+    """Return the Sonarr "add" URL for a show-, season- or episode-level item.
+
+    Media types Sonarr has no equivalent of (movies, games, books...) return an
+    empty string, so templates can gate the action with ``{% if sonarr_url %}``.
+    """
+    kwargs = {
+        "source": media.source,
+        "media_id": media.media_id,
+    }
+
+    if media.media_type == MediaTypes.TV.value:
+        return reverse("sonarr_add_tv", kwargs=kwargs)
+
+    if media.media_type in (MediaTypes.SEASON.value, MediaTypes.EPISODE.value):
+        kwargs["season_number"] = media.season_number
+        return reverse("sonarr_add_tv_season", kwargs=kwargs)
+
+    return ""
+
+
+@register.simple_tag
 def media_view_url(view_name, media):
     """Return the modal URL for both metadata and model object cases."""
     is_dict = isinstance(media, dict)

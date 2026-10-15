@@ -81,7 +81,7 @@ See [media-imports](media-imports.md).
 
 ## Sonarr Integration
 
-Sonarr is an optional, manual-only integration. Setting `SONARR_URL` and `SONARR_API_KEY` makes an **Add to Sonarr** button appear on the TV details page and on each season page. Nothing is ever sent to Sonarr automatically: tracking or importing a show never touches it.
+Sonarr is an optional, manual-only integration. Setting `SONARR_URL` and `SONARR_API_KEY` makes an **Add to Sonarr** button appear on the TV details page, on each season page, and on every TV card of the home page. Nothing is ever sent to Sonarr automatically: tracking or importing a show never touches it.
 
 | Name                     | Notes                                                                                                                                                                                                                                                             |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -93,7 +93,11 @@ Sonarr is an optional, manual-only integration. Setting `SONARR_URL` and `SONARR
 | `SONARR_LANGUAGE_PROFILE`| Language profile for Sonarr v3 only (e.g. `English`). Leave empty to leave the field untouched. Ignored on Sonarr v4, which dropped language profiles.                                                                                                             |
 | `SONARR_SEARCH_ON_ADD`   | Default to `False`. Sets the initial state of the **Search** checkbox next to the Add to Sonarr button. `False` only registers the show in Sonarr without grabbing anything; `True` pre-checks the box so a click also queues a search.                              |
 
-**What the buttons do.** From a whole series the show is added with every season but the specials monitored; from a season page only that season is monitored. If the show is already in Sonarr, the whole series button fills in any missing seasons and the season button monitors just that season. The Search checkbox is a per-click choice and defaults to `SONARR_SEARCH_ON_ADD`.
+**What the buttons do.** From a whole series the show is added with every season but the specials monitored; from a season page only that season is monitored. If the show is already in Sonarr, the whole series button fills in any missing seasons and the season button monitors just that season.
+
+On the home page, TV cards (a whole show, a season, or an episode) trade their **Activity History** button for an **Add to Sonarr** button, and on those cards the action also searches: it grabs whatever Sonarr is missing, so a mis-click downloads episodes. The button follows the tracked item, so tracking a season monitors that season and tracking an episode monitors the season it belongs to. The Activity History button is kept for the other media types, which Sonarr cannot take.
+
+On the details and season pages the Search checkbox is a per-click choice and defaults to `SONARR_SEARCH_ON_ADD`.
 
 ## Docker Secrets Support
 

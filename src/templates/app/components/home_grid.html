@@ -51,13 +51,35 @@
                   hx-trigger="click once"
                   @click="listsOpen = true">{% include "app/icons/list-add.svg" with classes="w-4 h-4" %}</button>
 
-          <button class="cursor-pointer rounded-full bg-amber-600 p-2.5 text-white transition-all duration-200 hover:scale-110 hover:bg-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]"
-                  title="View your activity history"
-                  hx-get="{% media_view_url 'history_modal' media.item %}"
-                  hx-vals='{"return_url": "{{ request.get_full_path|urlencode }}"}'
-                  hx-target="#{{ history_component_id }}"
-                  hx-trigger="click once"
-                  @click="historyOpen = true">{% include "app/icons/history.svg" with classes="w-4 h-4" %}</button>
+          {# TV-level items trade the history button for an explicit Sonarr action #}
+          {% sonarr_add_url media.item as sonarr_url %}
+          {% if sonarr_url and SONARR_ENABLED and media.item.source != Sources.MANUAL.value %}
+            <form method="post"
+                  action="{{ sonarr_url }}"
+                  x-data="{ loading: false }"
+                  @submit="loading = true">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              {# this button always searches, so it downloads what Sonarr is missing #}
+              <input type="hidden" name="search" value="true">
+              <button type="submit"
+                      class="cursor-pointer rounded-full bg-sky-600 p-2.5 text-white transition-all duration-200 hover:scale-110 hover:bg-sky-500 hover:shadow-[0_0_15px_rgba(14,165,233,0.5)] disabled:opacity-75"
+                      title="{% if media.item.media_type == MediaTypes.TV.value %}Add every normal season{% else %}Add season {{ media.item.season_number }}{% endif %} to Sonarr, then search for missing episodes"
+                      :disabled="loading">
+                <span class="flex" :class="{ 'animate-spin': loading }">
+                  {% include "app/icons/folder-plus.svg" with classes="w-4 h-4" %}
+                </span>
+              </button>
+            </form>
+          {% else %}
+            <button class="cursor-pointer rounded-full bg-amber-600 p-2.5 text-white transition-all duration-200 hover:scale-110 hover:bg-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+                    title="View your activity history"
+                    hx-get="{% media_view_url 'history_modal' media.item %}"
+                    hx-vals='{"return_url": "{{ request.get_full_path|urlencode }}"}'
+                    hx-target="#{{ history_component_id }}"
+                    hx-trigger="click once"
+                    @click="historyOpen = true">{% include "app/icons/history.svg" with classes="w-4 h-4" %}</button>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -94,13 +116,16 @@
       </div>
     </div>
 
-    <div x-show="historyOpen"
-         @keydown.escape.window="historyOpen = false"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div class="relative z-60 max-h-[90vh] w-96 px-4 md:px-0"
-           @click.outside="historyOpen = false">
-        <div id="{{ history_component_id }}"></div>
+    {# only rendered next to a history button, see the button row above #}
+    {% if not sonarr_url or not SONARR_ENABLED or media.item.source == Sources.MANUAL.value %}
+      <div x-show="historyOpen"
+           @keydown.escape.window="historyOpen = false"
+           class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div class="relative z-60 max-h-[90vh] w-96 px-4 md:px-0"
+             @click.outside="historyOpen = false">
+          <div id="{{ history_component_id }}"></div>
+        </div>
       </div>
-    </div>
+    {% endif %}
   </div>
 {% endfor %}

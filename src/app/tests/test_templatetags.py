@@ -417,3 +417,33 @@ class AppTagsTests(TestCase):
         for seconds, expected in cases:
             with self.subTest(seconds=seconds):
                 self.assertEqual(app_tags.seconds_to_duration(seconds), expected)
+
+    def test_sonarr_add_url(self):
+        """A show points at the series endpoint, seasons/episodes at their season."""
+        series_url = reverse(
+            "sonarr_add_tv",
+            kwargs={"source": Sources.TMDB.value, "media_id": "1668"},
+        )
+        season_url = reverse(
+            "sonarr_add_tv_season",
+            kwargs={
+                "source": Sources.TMDB.value,
+                "media_id": "1668",
+                "season_number": 1,
+            },
+        )
+
+        self.assertEqual(app_tags.sonarr_add_url(self.tv_item), series_url)
+        self.assertEqual(app_tags.sonarr_add_url(self.season_item), season_url)
+        self.assertEqual(app_tags.sonarr_add_url(self.episode_item), season_url)
+
+    def test_sonarr_add_url_is_empty_without_a_sonarr_equivalent(self):
+        """Media types Sonarr cannot take return an empty string."""
+        movie = Item(
+            media_id="11",
+            source=Sources.TMDB.value,
+            media_type=MediaTypes.MOVIE.value,
+            title="Test Movie",
+        )
+
+        self.assertEqual(app_tags.sonarr_add_url(movie), "")
