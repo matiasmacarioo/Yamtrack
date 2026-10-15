@@ -8,7 +8,8 @@
         <div class="{{ media.status|status_background_color }} h-[5px]"
              style="width: {{ progress_width }}%"></div>
       {% else %}
-        <div class="{{ media.status|status_background_color }} h-[5px] w-full"></div>
+        {# Total episode count unknown: show a neutral track, never a "full" bar. #}
+        <div class="bg-gray-600/40 h-[5px] w-full"></div>
       {% endif %}
     {% else %}
       <div class="{{ media.status|status_background_color }} h-[5px] w-full"></div>
