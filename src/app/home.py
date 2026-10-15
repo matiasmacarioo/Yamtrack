@@ -13,6 +13,14 @@ def build_home_section(key, media_types):
     }
 
 
+def is_active_in_progress_media(media):
+    """Return True when media still has released backlog."""
+    if not _is_incoming_media(media):
+        return True
+
+    return media.max_progress is not None and media.progress < media.max_progress
+
+
 def get_home_media_types(
     request,
     sort_by,
@@ -42,14 +50,6 @@ def get_home_media_types(
         items_limit,
         page_start=items_limit if specific_media_type else 0,
     )
-
-
-def is_active_in_progress_media(media):
-    """Return True when media still has released backlog."""
-    if not _is_incoming_media(media):
-        return True
-
-    return media.max_progress is not None and media.progress < media.max_progress
 
 
 def _filter_home_media_types(media_types, predicate):
