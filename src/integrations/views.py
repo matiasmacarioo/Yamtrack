@@ -18,7 +18,10 @@ from django.views.decorators.http import require_GET, require_POST
 
 import users
 from app import helpers as app_helpers
+from app.models import MediaTypes, Sources
+from app.providers import services
 from integrations import exports, tasks
+from integrations.arr import sonarr
 from integrations.imports import anilist, helpers, simkl, trakt
 from integrations.webhooks import emby, jellyfin, plex
 
@@ -586,3 +589,86 @@ def emby_webhook(request, token):
     processor = emby.EmbyWebhookProcessor()
     processor.process_payload(payload, user)
     return HttpResponse(status=200)
+
+
+def _back_to_media(request):
+    """Redirect back to the media page, honouring HTMX requests."""
+    next_url = request.POST.get("next")
+
+    if request.headers.get("HX-Request"):
+        return HttpResponse(
+            status=204,
+            headers={"HX-Redirect": next_url or "/"},
+        )
+
+    if next_url:
+        return redirect(next_url)
+    return app_helpers.redirect_back(request)
+
+
+@require_POST
+def sonarr_add_tv(request, source, media_id, season_number=None):
+    """Add a TV show, or one of its seasons, to Sonarr.
+
+    This is always an explicit action: tracking a media never calls Sonarr,
+    only this endpoint does.
+    """
+    back = _back_to_media(request)
+
+    if not settings.SONARR_ENABLED:
+        messages.error(request, "Sonarr is not configured on this instance.")
+        return back
+
+    if source == Sources.MANUAL.value:
+        messages.error(
+            request,
+            "Manual entries cannot be added to Sonarr, link the show to "
+            "TMDB or TVDB first.",
+        )
+        return back
+
+    try:
+        metadata = services.get_media_metadata(
+            MediaTypes.TV.value,
+            media_id,
+            source,
+        )
+    except services.ProviderAPIError as error:
+        logger.warning(
+            "Could not load metadata for %s %s: %s",
+            source,
+            media_id,
+            error,
+        )
+        messages.error(request, "Could not load the show metadata.")
+        return back
+
+    tvdb_id = metadata.get("tvdb_id") or None
+    try:
+        tmdb_id = int(media_id) if source == Sources.TMDB.value else None
+    except ValueError:
+        tmdb_id = None
+
+    if not tvdb_id and not tmdb_id:
+        messages.error(
+            request,
+            "This show has no TMDB or TVDB id, so it cannot be added to Sonarr.",
+        )
+        return back
+
+    result = sonarr.add_tv(
+        tvdb_id=tvdb_id,
+        tmdb_id=tmdb_id,
+        title=metadata.get("title") or "the show",
+        season_number=season_number,
+        search=request.POST.get("search") == "true",
+    )
+
+    if result.outcome == sonarr.OUTCOME_ERROR:
+        messages.error(request, result.message)
+    elif result.outcome == sonarr.OUTCOME_ALREADY:
+        messages.info(request, result.message)
+    else:
+        messages.success(request, result.message)
+
+    return back

@@ -12,6 +12,8 @@ def export_vars(request):  # noqa: ARG001
         "REDIRECT_LOGIN_TO_SSO": settings.REDIRECT_LOGIN_TO_SSO,
         "IMG_NONE": settings.IMG_NONE,
         "TRACK_TIME": settings.TRACK_TIME,
+        "SONARR_ENABLED": settings.SONARR_ENABLED,
+        "SONARR_SEARCH_ON_ADD": settings.SONARR_SEARCH_ON_ADD,
     }
 
 

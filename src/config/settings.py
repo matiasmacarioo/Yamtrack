@@ -510,6 +510,18 @@ SIMKL_SECRET = config(
     ),
 )
 
+# Sonarr integration ("Add to Sonarr" action on TV shows and seasons).
+SONARR_URL = config("SONARR_URL", default="").rstrip("/")
+SONARR_API_KEY = config(
+    "SONARR_API_KEY",
+    default=secret("SONARR_API_KEY_FILE", ""),
+)
+SONARR_QUALITY_PROFILE = config("SONARR_QUALITY_PROFILE", default="")
+SONARR_ROOT_FOLDER = config("SONARR_ROOT_FOLDER", default="")
+SONARR_LANGUAGE_PROFILE = config("SONARR_LANGUAGE_PROFILE", default="")
+SONARR_SEARCH_ON_ADD = config("SONARR_SEARCH_ON_ADD", default=False, cast=bool)
+SONARR_ENABLED = bool(SONARR_URL and SONARR_API_KEY)
+
 
 TESTING = False
 

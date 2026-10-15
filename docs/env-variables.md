@@ -96,6 +96,7 @@ YamTrack supports reading sensitive configuration values from Docker secrets fil
 | `HARDCOVER_API`           | `HARDCOVER_API_FILE`           |
 | `COMICVINE_API`           | `COMICVINE_API_FILE`           |
 | `TRAKT_API`               | `TRAKT_API_FILE`               |
+| `SONARR_API_KEY`          | `SONARR_API_KEY_FILE`          |
 | `SIMKL_ID`                | `SIMKL_ID_FILE`                |
 | `SIMKL_SECRET`            | `SIMKL_SECRET_FILE`            |
 | `SOCIALACCOUNT_PROVIDERS` | `SOCIALACCOUNT_PROVIDERS_FILE` |

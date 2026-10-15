@@ -51,4 +51,14 @@ urlpatterns = [
         views.emby_webhook,
         name="emby_webhook",
     ),
+    path(
+        "sonarr/add/<str:source>/<str:media_id>/",
+        views.sonarr_add_tv,
+        name="sonarr_add_tv",
+    ),
+    path(
+        "sonarr/add/<str:source>/<str:media_id>/season/<int:season_number>/",
+        views.sonarr_add_tv,
+        name="sonarr_add_tv_season",
+    ),
 ]
