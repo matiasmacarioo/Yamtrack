@@ -21,6 +21,7 @@ OUTCOME_ERROR = "error"
 
 SONARR_V4_MIN_MAJOR = 4
 HTTP_NOT_FOUND = 404
+SPECIALS_SEASON = 0
 
 
 class ArrResult:
@@ -187,6 +188,19 @@ def monitored_seasons(series):
     }
 
 
+def normal_seasons(series):
+    """Return every season number but the specials.
+
+    Matches what Sonarr's own "All" monitor preset picks, so that a whole
+    series means the same thing whether it is selected here or by Sonarr.
+    """
+    return {
+        season["seasonNumber"]
+        for season in series.get("seasons") or []
+        if season["seasonNumber"] != SPECIALS_SEASON
+    }
+
+
 def mark_seasons(series, seasons_to_monitor):
     """Return the series seasons with the monitored flags applied."""
     return [
@@ -302,11 +316,24 @@ def _monitor_season(client, existing, season_number, search):
     current = monitored_seasons(existing)
 
     if season_number is None:
-        message = f"{title} is already in {PROVIDER}."
+        # A whole series means every season but the specials, so a show that
+        # was added from a season page can still be completed from here.
+        target = normal_seasons(existing)
+        if target and target <= current:
+            message = f"{title} is already in {PROVIDER}."
+            if search:
+                queue_search(client, series_id)
+                message += " A search was queued."
+            return ArrResult(OUTCOME_ALREADY, message)
+
+        set_monitored_seasons(client, series_id, target)
+        message = f"{title} is now monitored in {PROVIDER}."
         if search:
             queue_search(client, series_id)
             message += " A search was queued."
-        return ArrResult(OUTCOME_ALREADY, message)
+
+        logger.info("%s", message)
+        return ArrResult(OUTCOME_UPDATED, message)
 
     if season_number in current:
         message = f"{title} season {season_number} is already monitored."

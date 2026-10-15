@@ -26,8 +26,19 @@ EXISTING_SERIES = {
     "tvdbId": 81189,
     "tmdbId": 1396,
     "seasons": [
+        {"seasonNumber": 0, "monitored": False},
         {"seasonNumber": 1, "monitored": True},
         {"seasonNumber": 2, "monitored": False},
+    ],
+}
+
+# The same show once every normal season is monitored.
+FULLY_MONITORED_SERIES = {
+    **EXISTING_SERIES,
+    "seasons": [
+        {"seasonNumber": 0, "monitored": False},
+        {"seasonNumber": 1, "monitored": True},
+        {"seasonNumber": 2, "monitored": True},
     ],
 }
 
@@ -220,13 +231,35 @@ class SonarrAddTvTest(TestCase):
         self.assertEqual(fake.requests_for("POST", "command"), [])
 
     def test_existing_series_is_not_added_twice(self):
-        """An already imported show reports 'already' and sends nothing."""
-        fake = fresh_client({"series": [EXISTING_SERIES]})
+        """A show already monitored sends nothing at all."""
+        fake = fresh_client({"series": [FULLY_MONITORED_SERIES]})
         result = self.add_tv(fake, tvdb_id=81189, tmdb_id=1396, title="Breaking Bad")
 
         self.assertEqual(result.outcome, sonarr.OUTCOME_ALREADY)
         self.assertIn("already", result.message)
         self.assertEqual(fake.requests_for("POST", "series"), [])
+        self.assertEqual(fake.requests_for("PUT", "series/7"), [])
+
+    def test_whole_series_completes_a_partially_monitored_show(self):
+        """The TV page completes a show that was only added by season.
+
+        Reporting "already" here would leave the rest of the show unmonitored
+        even though the button promises the whole series.
+        """
+        fake = fresh_client({"series": [EXISTING_SERIES]})
+        result = self.add_tv(fake, tvdb_id=81189, tmdb_id=1396, title="Breaking Bad")
+
+        self.assertEqual(result.outcome, sonarr.OUTCOME_UPDATED)
+        self.assertEqual(fake.requests_for("POST", "series"), [])
+
+        puts = fake.requests_for("PUT", "series/7")
+        self.assertEqual(len(puts), 1)
+
+        monitored = [s["seasonNumber"] for s in puts[0]["seasons"] if s["monitored"]]
+        self.assertEqual(monitored, [1, 2])
+
+        # The specials are left alone, matching Sonarr's own "all" preset.
+        self.assertNotIn(0, monitored)
 
     def test_existing_series_season_is_monitored(self):
         """Monitoring a missing season of an existing show issues a PUT."""
