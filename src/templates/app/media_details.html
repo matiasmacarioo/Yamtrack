@@ -372,8 +372,13 @@
 
           {# Add to Sonarr #}
           {% if SONARR_ENABLED and media.source != Sources.MANUAL.value %}
+            {% if media.media_type == MediaTypes.SEASON.value %}
+              {% url 'sonarr_add_tv_season' source=media.source media_id=media.media_id season_number=media.season_number as sonarr_url %}
+            {% else %}
+              {% url 'sonarr_add_tv' source=media.source media_id=media.media_id as sonarr_url %}
+            {% endif %}
             <form method="post"
-                  action="{% if media.media_type == MediaTypes.SEASON.value %} {% url 'sonarr_add_tv_season' source=media.source media_id=media.media_id season_number=media.season_number %} {% else %} {% url 'sonarr_add_tv' source=media.source media_id=media.media_id %} {% endif %}"
+                  action="{{ sonarr_url }}"
                   x-data="{ loading: false }"
                   @submit="loading = true">
               {% csrf_token %}
@@ -384,7 +389,9 @@
                       class="w-full flex items-center gap-x-3 px-4 py-3 text-sm text-gray-200 hover:bg-[#343a40] transition-colors duration-200 cursor-pointer disabled:opacity-75"
                       :disabled="loading">
                 <span class="flex items-center justify-center w-8 h-8 rounded-md bg-sky-600/15 text-sky-400 shrink-0">
-                  <span class="flex" :class="{ 'animate-spin': loading }">{% include "app/icons/tv.svg" with classes="w-4 h-4" %}</span>
+                  <span class="flex" :class="{ 'animate-spin': loading }">
+                    {% include "app/icons/folder-plus.svg" with classes="w-4 h-4" %}
+                  </span>
                 </span>
                 <span class="font-medium flex-1 text-left">
                   {% if media.media_type == MediaTypes.SEASON.value %}

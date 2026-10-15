@@ -258,3 +258,133 @@ class SonarrAddTvViewTest(TestCase):
         kwargs = add.call_args.kwargs
         self.assertIsNone(kwargs["tmdb_id"])
         self.assertEqual(kwargs["tvdb_id"], 81189)
+
+
+TV_METADATA = {
+    "media_id": 1396,
+    "media_type": "tv",
+    "source": "tmdb",
+    "source_url": "https://www.themoviedb.org/tv/1396",
+    "title": "Breaking Bad",
+    "image": "https://image.tmdb.org/t/p/w500/poster.jpg",
+    "synopsis": "A chemistry teacher.",
+    "genres": ["Drama"],
+    "score": 8.9,
+    "score_count": 1000,
+    "details": {"format": "TV", "status": "Ended"},
+    "related": {},
+    "cast": [],
+    "tvdb_id": 81189,
+    "external_links": {},
+    "last_episode_season": 5,
+    "next_episode_season": None,
+    "providers": [],
+}
+
+SEASON_METADATA = {
+    **TV_METADATA,
+    "media_type": "season",
+    "season_number": 2,
+    "episodes": [],
+    "max_progress": 13,
+    "details": {"format": "Season", "status": "Ended"},
+}
+
+
+@override_settings(**SONARR_SETTINGS)
+class SonarrTemplateTest(TestCase):
+    """Check the Sonarr buttons actually render on the details pages."""
+
+    def setUp(self):
+        """Log a user in and fake the provider metadata."""
+        credentials = {
+            "username": "testuser",
+            "email": "test@test.com",
+            "password": "testpass",
+        }
+        self.user = get_user_model().objects.create_user(**credentials)
+        self.client.force_login(self.user)
+
+    def details_url(self):
+        """Return the TV details page URL."""
+        return reverse(
+            "media_details",
+            kwargs={
+                "source": "tmdb",
+                "media_type": "tv",
+                "media_id": "1396",
+                "title": "breaking-bad",
+            },
+        )
+
+    def season_url(self):
+        """Return the season details page URL."""
+        return reverse(
+            "season_details",
+            kwargs={
+                "source": "tmdb",
+                "media_id": "1396",
+                "title": "breaking-bad",
+                "season_number": 2,
+            },
+        )
+
+    def render_details(self, url, metadata):
+        """Render a details page with the provider metadata stubbed out."""
+        with (
+            patch(
+                "app.views.services.get_media_metadata",
+                return_value=metadata,
+            ),
+            patch("app.views.tmdb.filter_providers", return_value=[]),
+            patch("app.views.tmdb.process_episodes", return_value=[]),
+        ):
+            return self.client.get(url)
+
+    def test_tv_page_shows_the_series_button(self):
+        """The TV page offers to add the whole series."""
+        response = self.render_details(self.details_url(), TV_METADATA)
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Add to Sonarr", content)
+        self.assertIn(
+            reverse("sonarr_add_tv", kwargs={"source": "tmdb", "media_id": "1396"}),
+            content,
+        )
+
+    def test_season_page_shows_the_season_button(self):
+        """The season page names the season it will monitor."""
+        tv_with_seasons = {**SEASON_METADATA, "season/2": SEASON_METADATA}
+        response = self.render_details(self.season_url(), tv_with_seasons)
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Add to Sonarr", content)
+        self.assertIn("S2", content)
+        self.assertIn("season/2", content)
+
+    def test_button_is_hidden_when_disabled(self):
+        """Without configuration the action is not offered at all."""
+        with override_settings(SONARR_ENABLED=False):
+            response = self.render_details(self.details_url(), TV_METADATA)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Add to Sonarr", response.content.decode())
+
+    def test_button_is_hidden_for_manual_entries(self):
+        """Manual shows have no provider id to hand to Sonarr."""
+        metadata = {**TV_METADATA, "source": "manual"}
+        response = self.render_details(self.details_url(), metadata)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Add to Sonarr", response.content.decode())
+
+    def test_search_toggle_reflects_the_env_default(self):
+        """The toggle starts checked when SONARR_SEARCH_ON_ADD is True."""
+        with override_settings(SONARR_SEARCH_ON_ADD=True):
+            response = self.render_details(self.details_url(), TV_METADATA)
+
+        content = response.content.decode()
+        self.assertIn('name="search"', content)
+        self.assertIn("checked", content)
