@@ -41,14 +41,19 @@ def history_list(request, source, media_type, media_id):
             media_entry_number = total_medias - index + 1
             timeline.extend(
                 history_processor.process_history_entries(
-                    history, media_type, media_entry_number, request.user,
+                    history,
+                    media_type,
+                    media_entry_number,
+                    request.user,
                 ),
             )
 
-    return Response({
-        "timeline": timeline,
-        "total": total_medias,
-    })
+    return Response(
+        {
+            "timeline": timeline,
+            "total": total_medias,
+        }
+    )
 
 
 @login_not_required
@@ -56,11 +61,13 @@ def history_list(request, source, media_type, media_id):
 def history_delete(request, media_type, history_id):
     """Delete a specific history record."""
     historical_model = apps.get_model(
-        app_label="app", model_name=f"historical{media_type.lower()}",
+        app_label="app",
+        model_name=f"historical{media_type.lower()}",
     )
     try:
         historical_model.objects.get(
-            history_id=history_id, history_user=request.user,
+            history_id=history_id,
+            history_user=request.user,
         ).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     except historical_model.DoesNotExist:

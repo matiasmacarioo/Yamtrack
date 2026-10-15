@@ -22,15 +22,21 @@ def search(request):
 
     data = serializer.validated_data
     source = data.get(
-        "source", config.get_default_source_name(data["media_type"]).value,
+        "source",
+        config.get_default_source_name(data["media_type"]).value,
     )
     results = services.search(
-        data["media_type"], data["q"], data.get("page", 1), source,
+        data["media_type"],
+        data["q"],
+        data.get("page", 1),
+        source,
     )
 
     if results.get("results"):
         enriched = enrich_items_with_user_data(
-            request, results["results"], "search",
+            request,
+            results["results"],
+            "search",
         )
         results["results"] = [
             {

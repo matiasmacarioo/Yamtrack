@@ -63,7 +63,10 @@ class MediaCreateSerializer(serializers.Serializer):
     season_number = serializers.IntegerField(required=False, allow_null=True)
     status = serializers.ChoiceField(choices=Status.choices, required=False)
     score = serializers.DecimalField(
-        max_digits=3, decimal_places=1, required=False, allow_null=True,
+        max_digits=3,
+        decimal_places=1,
+        required=False,
+        allow_null=True,
     )
     progress = serializers.IntegerField(required=False, default=0)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
@@ -76,7 +79,10 @@ class MediaUpdateSerializer(serializers.Serializer):
 
     status = serializers.ChoiceField(choices=Status.choices, required=False)
     score = serializers.DecimalField(
-        max_digits=3, decimal_places=1, required=False, allow_null=True,
+        max_digits=3,
+        decimal_places=1,
+        required=False,
+        allow_null=True,
     )
     progress = serializers.IntegerField(required=False)
     notes = serializers.CharField(required=False, allow_blank=True)

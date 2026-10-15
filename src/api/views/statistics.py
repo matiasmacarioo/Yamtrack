@@ -37,7 +37,9 @@ def statistics(request):
             )
 
     user_media, media_count = stats.get_user_media(
-        request.user, start_date, end_date,
+        request.user,
+        start_date,
+        end_date,
     )
     media_type_distribution = stats.get_media_type_distribution(media_count)
     score_distribution, _top_rated = stats.get_score_distribution(user_media)
@@ -46,12 +48,14 @@ def statistics(request):
     consumption_stats = stats.get_consumption_stats(user_media, media_count)
     activity_data = stats.get_activity_data(request.user, start_date, end_date)
 
-    return Response({
-        "media_count": media_count,
-        "media_type_distribution": media_type_distribution,
-        "score_distribution": score_distribution,
-        "status_distribution": status_distribution,
-        "status_pie_chart_data": status_pie_chart_data,
-        "consumption_stats": consumption_stats,
-        "activity_data": activity_data,
-    })
+    return Response(
+        {
+            "media_count": media_count,
+            "media_type_distribution": media_type_distribution,
+            "score_distribution": score_distribution,
+            "status_distribution": status_distribution,
+            "status_pie_chart_data": status_pie_chart_data,
+            "consumption_stats": consumption_stats,
+            "activity_data": activity_data,
+        }
+    )

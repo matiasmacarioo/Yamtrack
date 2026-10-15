@@ -109,10 +109,12 @@ class MediaApiTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         movie = Movie.objects.get(item__media_id="789")
         self.assertEqual(
-            movie.start_date.isoformat(), "2024-01-01T10:00:00+00:00",
+            movie.start_date.isoformat(),
+            "2024-01-01T10:00:00+00:00",
         )
         self.assertEqual(
-            movie.end_date.isoformat(), "2024-01-02T12:30:00+00:00",
+            movie.end_date.isoformat(),
+            "2024-01-02T12:30:00+00:00",
         )
 
     @patch("app.providers.services.get_media_metadata", return_value=MOCK_METADATA)

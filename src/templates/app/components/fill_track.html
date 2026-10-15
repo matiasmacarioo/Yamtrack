@@ -23,40 +23,40 @@
     {% with total_fields=form.fields|length %}
       {% if total_fields > 8 %}<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">{% endif %}
 
-        {% for field in form %}
-          {% if field.name != 'notes' and field.name != 'instance_id' and field.name != 'media_type' and field.name != 'source' and field.name != 'media_id' and field.name != 'season_number' %}
-            <div class="mb-5 {% if field.name == 'status' and total_fields|divisibleby:2 %}sm:col-span-2{% endif %}">
-              <label class="block text-sm font-medium mb-1 text-gray-300"
-                     for="{{ field.id_for_label }}">{{ field.label }}</label>
-              <div class="relative">
-                {% if field.name == "status" %}
-                  {{ field|add_class:"w-full p-2 bg-[#39404b] rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4a9eff] appearance-none" }}
-                  <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none">
-                    {% include "app/icons/chevron-down.svg" with classes="w-4 h-4" %}
-                  </div>
-                {% elif field.field.widget.input_type == 'number' %}
-                  {{ field|add_class:"w-full p-2 pr-12 bg-[#39404b] rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4a9eff] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" }}
-                  <div class="absolute inset-y-0 right-0 flex flex-col border-l border-gray-600">
-                    <button type="button"
-                            class="flex-1 px-2 hover:bg-gray-700 transition-colors rounded-tr-md border-t border-r border-gray-600"
-                            onclick="this.parentElement.previousElementSibling.stepUp()">
-                      {% include "app/icons/chevron-up.svg" with classes="w-3.5 h-3.5" %}
-                    </button>
-                    <button type="button"
-                            class="flex-1 px-2 hover:bg-gray-700 transition-colors rounded-br-md border-b border-r border-gray-600"
-                            onclick="this.parentElement.previousElementSibling.stepDown()">
-                      {% include "app/icons/chevron-down.svg" with classes="w-3.5 h-3.5" %}
-                    </button>
-                  </div>
-                {% else %}
-                  {{ field|add_class:"w-full p-2 bg-[#39404b] rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4a9eff]" }}
-                {% endif %}
-              </div>
+      {% for field in form %}
+        {% if field.name != 'notes' and field.name != 'instance_id' and field.name != 'media_type' and field.name != 'source' and field.name != 'media_id' and field.name != 'season_number' %}
+          <div class="mb-5 {% if field.name == 'status' and total_fields|divisibleby:2 %}sm:col-span-2{% endif %}">
+            <label class="block text-sm font-medium mb-1 text-gray-300"
+                   for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <div class="relative">
+              {% if field.name == "status" %}
+                {{ field|add_class:"w-full p-2 bg-[#39404b] rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4a9eff] appearance-none" }}
+                <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                  {% include "app/icons/chevron-down.svg" with classes="w-4 h-4" %}
+                </div>
+              {% elif field.field.widget.input_type == 'number' %}
+                {{ field|add_class:"w-full p-2 pr-12 bg-[#39404b] rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4a9eff] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" }}
+                <div class="absolute inset-y-0 right-0 flex flex-col border-l border-gray-600">
+                  <button type="button"
+                          class="flex-1 px-2 hover:bg-gray-700 transition-colors rounded-tr-md border-t border-r border-gray-600"
+                          onclick="this.parentElement.previousElementSibling.stepUp()">
+                    {% include "app/icons/chevron-up.svg" with classes="w-3.5 h-3.5" %}
+                  </button>
+                  <button type="button"
+                          class="flex-1 px-2 hover:bg-gray-700 transition-colors rounded-br-md border-b border-r border-gray-600"
+                          onclick="this.parentElement.previousElementSibling.stepDown()">
+                    {% include "app/icons/chevron-down.svg" with classes="w-3.5 h-3.5" %}
+                  </button>
+                </div>
+              {% else %}
+                {{ field|add_class:"w-full p-2 bg-[#39404b] rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4a9eff]" }}
+              {% endif %}
             </div>
-          {% endif %}
-        {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
 
-        {% if total_fields > 8 %}</div>{% endif %}
+      {% if total_fields > 8 %}</div>{% endif %}
     {% endwith %}
 
     {% if form.notes %}

@@ -77,7 +77,9 @@ class EpisodeApiTest(TestCase):
             "episode_number": 1,
         }
         self.client.post(
-            "/api/episodes/", payload, content_type="application/json",
+            "/api/episodes/",
+            payload,
+            content_type="application/json",
         )
         response = self.client.post(
             "/api/episodes/",
@@ -90,5 +92,6 @@ class EpisodeApiTest(TestCase):
             item__episode_number=1,
         )
         self.assertEqual(
-            episode.end_date.isoformat(), "2024-01-02T12:30:00+00:00",
+            episode.end_date.isoformat(),
+            "2024-01-02T12:30:00+00:00",
         )

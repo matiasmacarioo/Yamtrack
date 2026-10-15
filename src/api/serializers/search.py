@@ -7,7 +7,14 @@ class SearchSerializer(serializers.Serializer):
     q = serializers.CharField(required=True)
     media_type = serializers.ChoiceField(
         choices=[
-            "tv", "movie", "anime", "manga", "game", "book", "comic", "boardgame",
+            "tv",
+            "movie",
+            "anime",
+            "manga",
+            "game",
+            "book",
+            "comic",
+            "boardgame",
         ],
     )
     source = serializers.CharField(required=False)

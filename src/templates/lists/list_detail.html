@@ -41,15 +41,7 @@
     {% include "lists/components/list_form.html" %}
   </div>
 
-  <div x-data="{ sort: '{{ current_sort|escapejs }}', type: '{{ request.GET.type|default:'all'|escapejs }}', status: '{{ current_status|escapejs }}', query: '{{ request.GET.q|default:''|escapejs }}', mediaTypeLabels: {
-    {% for media_type in media_types %}'{{ media_type }}': '{{ media_type|media_type_readable_plural }}',{% endfor %}
-    'all': 'All Types' }, statusLabels: {
-    {% for value, label in status_choices %}
-      '{{ value }}': '{{ label }}'
-      {% if not forloop.last %},{% endif %}
-
-    {% endfor %}
-    }, getMediaTypeLabel() { return this.mediaTypeLabels[this.type] || this.type; } }">
+  <div x-data="{ sort: '{{ current_sort|escapejs }}', type: '{{ request.GET.type|default:'all'|escapejs }}', status: '{{ current_status|escapejs }}', query: '{{ request.GET.q|default:''|escapejs }}', mediaTypeLabels: { {% for media_type in media_types %}'{{ media_type }}': '{{ media_type|media_type_readable_plural }}',{% endfor %} 'all': 'All Types' }, statusLabels: { {% for value, label in status_choices %} '{{ value }}': '{{ label }}' {% if not forloop.last %},{% endif %}  {% endfor %} }, getMediaTypeLabel() { return this.mediaTypeLabels[this.type] || this.type; } }">
 
     <!-- Form to manage state -->
     <form id="filter-form" class="hidden">

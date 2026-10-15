@@ -40,7 +40,12 @@ def media_list(request, media_type):
     search_query = request.GET.get("search", "")
 
     valid_statuses = [
-        "All", "Completed", "In progress", "Planning", "Paused", "Dropped",
+        "All",
+        "Completed",
+        "In progress",
+        "Planning",
+        "Paused",
+        "Dropped",
     ]
     if status_filter not in valid_statuses:
         status_filter = "All"
@@ -63,12 +68,14 @@ def media_list(request, media_type):
     page_items = media_queryset[start:end]
 
     serializer = MediaSerializer(page_items, many=True)
-    return Response({
-        "count": total,
-        "page": page,
-        "per_page": items_per_page,
-        "results": serializer.data,
-    })
+    return Response(
+        {
+            "count": total,
+            "page": page,
+            "per_page": items_per_page,
+            "results": serializer.data,
+        }
+    )
 
 
 @login_not_required
@@ -97,10 +104,12 @@ def home(request):
             }
         return result
 
-    return Response({
-        "in_progress": serialize_section(in_progress),
-        "planning": serialize_section(planning),
-    })
+    return Response(
+        {
+            "in_progress": serialize_section(in_progress),
+            "planning": serialize_section(planning),
+        }
+    )
 
 
 @login_not_required
@@ -116,7 +125,10 @@ def media_create(request, media_type):  # noqa: ARG001
     season_numbers = [season_number] if season_number else None
     try:
         metadata = services.get_media_metadata(
-            data["media_type"], data["media_id"], data["source"], season_numbers,
+            data["media_type"],
+            data["media_id"],
+            data["source"],
+            season_numbers,
         )
     except services.ProviderAPIError:
         logger.exception("Failed to fetch metadata from provider.")
@@ -191,7 +203,8 @@ def media_update(request, media_type, instance_id):
 
     for attr, value in serializer.validated_data.items():
         progress_is_property = isinstance(
-            getattr(media.__class__, "progress", None), property,
+            getattr(media.__class__, "progress", None),
+            property,
         )
         if attr == "progress" and progress_is_property:
             if hasattr(media, "set_progress"):
@@ -263,7 +276,10 @@ def sync_metadata(request, source, media_type, media_id):
     season_number = request.data.get("season_number")
     season_numbers = [season_number] if season_number else None
     metadata = services.get_media_metadata(
-        media_type, media_id, source, season_numbers,
+        media_type,
+        media_id,
+        source,
+        season_numbers,
     )
     Item.objects.update_or_create(
         media_id=media_id,
@@ -281,7 +297,10 @@ def details(request, source, media_type, media_id):
     """Get metadata details and tracking info for a media item."""
     metadata = services.get_media_metadata(media_type, media_id, source)
     user_medias = BasicMedia.objects.filter_media_prefetch(
-        request.user, media_id, media_type, source,
+        request.user,
+        media_id,
+        media_type,
+        source,
     )
     current_instance = user_medias[0] if user_medias else None
 
@@ -297,7 +316,10 @@ def details(request, source, media_type, media_id):
 def season_details(request, source, media_id, season_number):
     """Get season metadata details and tracking info."""
     tv_with_seasons = services.get_media_metadata(
-        "tv_with_seasons", media_id, source, [season_number],
+        "tv_with_seasons",
+        media_id,
+        source,
+        [season_number],
     )
     season_metadata = tv_with_seasons[f"season/{season_number}"]
     user_medias = BasicMedia.objects.filter_media_prefetch(
