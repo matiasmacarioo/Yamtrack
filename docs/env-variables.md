@@ -79,6 +79,22 @@ See [media-imports](media-imports.md).
 | `DB_SSL_MODE`      | Determines whether or with what priority a secure SSL TCP/IP connection will be negotiated with the server. See [the official documentation](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-SSLMODE).               |
 | `DB_SSL_CERT_MODE` | Determines whether a client certificate may be sent to the server, and whether the server is required to request one. See [the official documentation](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-SSLCERTMODE). |
 
+## Sonarr Integration
+
+Sonarr is an optional, manual-only integration. Setting `SONARR_URL` and `SONARR_API_KEY` makes an **Add to Sonarr** button appear on the TV details page and on each season page. Nothing is ever sent to Sonarr automatically: tracking or importing a show never touches it.
+
+| Name                     | Notes                                                                                                                                                                                                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SONARR_URL`             | Base URL of your Sonarr instance (e.g. `http://sonarr:8989`). When Sonarr runs directly on the Docker host rather than in a container, use `http://host.docker.internal:8989`. Trailing slashes are ignored. Empty (the default) disables the integration.           |
+| `SONARR_API_KEY`         | Sonarr API key, found under Settings → General → Security. Can be provided as `SONARR_API_KEY_FILE` instead. Both `SONARR_URL` and `SONARR_API_KEY` are required for the button to show up.                                                                          |
+| `SONARR_ENABLED`         | Read-only, derived from `SONARR_URL` and `SONARR_API_KEY`. It is exported to the UI so the button and the Search toggle can be hidden when the integration is not configured. Set it indirectly, not directly.                                                       |
+| `SONARR_QUALITY_PROFILE` | Quality profile to add a show with, by exact name (e.g. `4K o 1080p - Upgrades Allowed`) or by numeric id (e.g. `7`). Empty (the default) uses the first profile Sonarr returns.                                                                                    |
+| `SONARR_ROOT_FOLDER`     | Root folder for new shows, either the id or the path (e.g. `D:/Series`). Empty (the default) uses the first root folder Sonarr reports. The value is matched against Sonarr's own folders ignoring slash direction and case, so `D:/Series` and `D:\Series` are equal. |
+| `SONARR_LANGUAGE_PROFILE`| Language profile for Sonarr v3 only (e.g. `English`). Leave empty to leave the field untouched. Ignored on Sonarr v4, which dropped language profiles.                                                                                                             |
+| `SONARR_SEARCH_ON_ADD`   | Default to `False`. Sets the initial state of the **Search** checkbox next to the Add to Sonarr button. `False` only registers the show in Sonarr without grabbing anything; `True` pre-checks the box so a click also queues a search.                              |
+
+**What the buttons do.** From a whole series the show is added with every season but the specials monitored; from a season page only that season is monitored. If the show is already in Sonarr, the whole series button fills in any missing seasons and the season button monitors just that season. The Search checkbox is a per-click choice and defaults to `SONARR_SEARCH_ON_ADD`.
+
 ## Docker Secrets Support
 
 YamTrack supports reading sensitive configuration values from Docker secrets files. The following environment variables can alternatively be provided as secrets:
