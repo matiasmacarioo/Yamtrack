@@ -20,6 +20,9 @@ COPY ./uv.lock ./uv.lock
 
 RUN uv sync --locked
 
+# Bake the release version from pyproject.toml so the app can report it at runtime.
+RUN python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])" > /app-version.txt
+
 # --- Final stage: minimal runtime image ---
 FROM python:${PYTHON_VERSION}-alpine${ALPINE_VERSION}
 
@@ -51,6 +54,9 @@ RUN apk add --no-cache nginx shadow \
 
 # Copy the pre-built virtualenv from the builder stage
 COPY --from=builder /yamtrack/.venv /yamtrack/.venv
+
+# Release version baked at build time (see builder stage)
+COPY --from=builder /app-version.txt /yamtrack/.app-version
 
 # Django app
 COPY src ./

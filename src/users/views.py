@@ -315,7 +315,11 @@ def advanced(request):
 @require_GET
 def about(request):
     """Render the about page."""
-    return render(request, "users/about.html", {"version": settings.VERSION})
+    return render(
+        request,
+        "users/about.html",
+        {"version": settings.VERSION, "app_version": settings.APP_VERSION},
+    )
 
 
 @require_POST

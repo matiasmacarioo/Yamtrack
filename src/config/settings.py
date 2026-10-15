@@ -348,6 +348,18 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50 MB
 
 VERSION = config("VERSION", default="dev")
 
+
+def _baked_app_version() -> str:
+    """Return the release version baked into the image at build time, if any."""
+    try:
+        return (BASE_DIR / ".app-version").read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+# Release version from pyproject.toml, baked into the image at build time.
+APP_VERSION = config("APP_VERSION", default="") or _baked_app_version()
+
 ADMIN_ENABLED = config("ADMIN_ENABLED", default=False, cast=bool)
 
 TRACK_TIME = config("TRACK_TIME", default=True, cast=bool)
