@@ -70,13 +70,15 @@ class ShellNavigationTest(TestCase):
                 self.assertIn('id="main-content"', response.content.decode())
 
     def test_the_sidebar_navigation_is_boosted(self):
-        """Boosted links swap #main-content; the sidebar follows out of band."""
+        """Boosted links swap #main-content; the nav and footer follow out of band."""
         response = self.client.get(reverse("home"))
         content = response.content.decode()
 
-        nav = re.search(r"<nav\b[^>]*>", content)
+        nav = re.search(r'<nav id="sidebar-nav"[^>]*>', content)
         self.assertIsNotNone(nav)
         self.assertIn('hx-boost="true"', nav.group(0))
+        # A tap on any sidebar link closes the mobile menu.
+        self.assertIn('@click="isMobileMenuOpen = false"', nav.group(0))
 
         # The configuration lives once on the aside; every boosted link inside
         # inherits it, so a click never repeats it per link.
@@ -87,9 +89,39 @@ class ShellNavigationTest(TestCase):
         self.assertIn('hx-target="#main-content"', aside_tag)
         self.assertIn('hx-select="#main-content"', aside_tag)
         self.assertIn('hx-swap="outerHTML"', aside_tag)
-        self.assertIn('hx-select-oob="#sidebar"', aside_tag)
+        self.assertIn('hx-select-oob="#sidebar-nav,#sidebar-footer"', aside_tag)
         self.assertIn('hx-push-url="true"', aside_tag)
         self.assertIn("X-Soft-Navigation", aside_tag)
+
+    def test_the_out_of_band_targets_never_replace_the_aside(self):
+        """Swapping the aside would drop the Alpine :class that drives the menu.
+
+        The aside owns the mobile-menu state, so only its inner nav and footer
+        may be refreshed out of band.
+        """
+        response = self.client.get(reverse("home"))
+        content = response.content.decode()
+
+        aside = re.search(r"<aside\b[^>]*>", content)
+        self.assertIsNotNone(aside)
+        oob = re.search(r'hx-select-oob="([^"]+)"', aside.group(0))
+        self.assertIsNotNone(oob)
+
+        targets = oob.group(1).split(",")
+        self.assertEqual(targets, ["#sidebar-nav", "#sidebar-footer"])
+        self.assertNotIn("#sidebar", targets)
+        self.assertIn('id="sidebar-nav"', content)
+        self.assertIn('id="sidebar-footer"', content)
+
+    def test_the_mobile_menu_uses_a_class_binding(self):
+        """x-show on the overlay is lost once content is swapped; :class is not."""
+        response = self.client.get(reverse("home"))
+        content = response.content.decode()
+
+        overlay = re.search(r'<div id="mobile-menu-overlay"[^>]*>', content)
+        self.assertIsNotNone(overlay)
+        self.assertIn(":class=\"isMobileMenuOpen ? '' : 'hidden'\"", overlay.group(0))
+        self.assertNotIn("x-show", overlay.group(0))
 
     def test_the_settings_link_is_boosted_but_logout_is_not(self):
         """Settings sits outside the nav, so it carries its own boost."""
@@ -106,7 +138,7 @@ class ShellNavigationTest(TestCase):
         self.assertNotIn("hx-boost", logout.group(0))
 
     def test_a_soft_navigation_carries_both_main_content_and_sidebar(self):
-        """The out-of-band sidebar swap needs the sidebar in the response."""
+        """The out-of-band swap needs the nav and footer in the response."""
         response = self.client.get(
             reverse("home"),
             headers={"HX-Request": "true", "X-Soft-Navigation": "true"},
@@ -115,13 +147,18 @@ class ShellNavigationTest(TestCase):
 
         self.assertIn('id="main-content"', content)
         self.assertIn('id="sidebar"', content)
+        self.assertIn('id="sidebar-nav"', content)
+        self.assertIn('id="sidebar-footer"', content)
 
     def test_a_partial_refresh_does_not_drag_the_sidebar_along(self):
         """Only a full page carries the sidebar, so its id can never collide."""
         response = self.client.get("/test/movie", headers={"HX-Request": "true"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn('id="sidebar"', response.content.decode())
+        content = response.content.decode()
+        self.assertNotIn('id="sidebar"', content)
+        self.assertNotIn('id="sidebar-nav"', content)
+        self.assertNotIn('id="sidebar-footer"', content)
 
     def test_a_boosted_home_request_returns_the_full_page(self):
         """hx-select can only find the fragment if the page is served whole."""

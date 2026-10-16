@@ -60,27 +60,31 @@
            x-data="{ isMobileMenuOpen: false }">
 
         {# Mobile menu overlay #}
-        <div x-show="isMobileMenuOpen"
+        <div id="mobile-menu-overlay"
              class="fixed inset-0 bg-black/50 z-30 lg:hidden"
+             :class="isMobileMenuOpen ? '' : 'hidden'"
              @click="isMobileMenuOpen = false"></div>
 
         {# Sidebar #}
         {# Every boosted link inside inherits the hx-* config below, so a click swaps only #main-content. #}
-        {# hx-select-oob takes this sidebar out of the response too, which is how the active highlight follows the new URL. #}
-        {# hx-push-url keeps the address bar shareable; X-Soft-Navigation tells the views to answer with the full page. #}
+        {# hx-select-oob refreshes just the inner nav + footer so the active highlight follows the new URL. #}
+        {# The aside itself is never swapped: it owns the Alpine :class for the mobile menu. #}
         <aside id="sidebar"
                class="fixed top-0 left-0 z-40 h-screen w-64 bg-[#1a1d20] transform transition-transform duration-300 ease-in-out border-r border-[#2c3136] -translate-x-full lg:translate-x-0 lg:sticky flex flex-col"
                :class="isMobileMenuOpen ? 'translate-x-0' : ''"
                hx-target="#main-content"
                hx-select="#main-content"
                hx-swap="outerHTML"
-               hx-select-oob="#sidebar"
+               hx-select-oob="#sidebar-nav,#sidebar-footer"
                hx-push-url="true"
                hx-headers='{"X-Soft-Navigation": "true"}'>
           <div class="h-16 border-b border-[#2c3136] flex items-center px-6">
             <h1 class="text-2xl font-semibold text-gray-100">Yamtrack</h1>
           </div>
-          <nav class="p-4 flex-1 overflow-y-auto" hx-boost="true">
+          <nav id="sidebar-nav"
+               class="p-4 flex-1 overflow-y-auto"
+               hx-boost="true"
+               @click="isMobileMenuOpen = false">
             {% block sidebar_own_media %}
               <ul class="space-y-1 mb-6">
                 <li>
@@ -204,7 +208,7 @@
           </nav>
 
           {% block sidebar_logout %}
-            <div class="p-4 border-t border-[#2c3136] mt-auto">
+            <div id="sidebar-footer" class="p-4 border-t border-[#2c3136] mt-auto">
               <div class="space-y-2">
                 {% url 'account' as account_url %}
                 {% url 'notifications' as notifications_url %}
@@ -214,6 +218,7 @@
                 {% url 'export_data' as export_url %}
                 <a href="{{ account_url }}"
                    hx-boost="true"
+                   @click="isMobileMenuOpen = false"
                    class="flex items-center space-x-3 px-4 py-2 rounded-md transition-colors duration-200 text-sm {% if request.path == account_url or request.path == notifications_url or request.path == sidebar_url or request.path == integrations_url or request.path == import_url or request.path == export_url %}text-white bg-[#2c3136]{% else %}text-gray-400 hover:text-white hover:bg-[#23272b]{% endif %}">
                   {% if request.path == account_url or request.path == notifications_url or request.path == sidebar_url or request.path == integrations_url or request.path == import_url or request.path == export_url %}
                     {% include "app/icons/settings.svg" with classes="w-5 h-5 text-indigo-400 " %}
@@ -249,7 +254,8 @@
             <div class="container mx-auto px-4">
               <div class="flex items-center justify-between lg:justify-center h-16">
                 {# Mobile: sidebar toggle button #}
-                <button @click="isMobileMenuOpen = !isMobileMenuOpen"
+                <button id="mobile-menu-toggle"
+                        @click="isMobileMenuOpen = !isMobileMenuOpen"
                         class="lg:hidden pe-3 text-gray-400 hover:text-white transition-colors duration-200">
                   {% include "app/icons/hamburger.svg" with classes="w-6 h-6" %}
 
