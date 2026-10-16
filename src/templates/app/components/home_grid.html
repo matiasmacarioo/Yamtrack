@@ -33,7 +33,7 @@
         </div>
       {% endif %}
 
-      <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover-tap:opacity-100 pointer-events-none hover-tap:pointer-events-auto{% if user.clickable_media_cards %} pointer-coarse:hidden{% endif %}">
+      <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover-tap:opacity-100{% if user.clickable_media_cards %} pointer-coarse:hidden{% endif %}">
         <a href="{{ media.item|media_url }}"
            class="absolute inset-0 z-0"
            hx-boost="true"
