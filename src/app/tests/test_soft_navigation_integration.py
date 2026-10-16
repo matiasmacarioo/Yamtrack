@@ -155,3 +155,43 @@ class SoftNavigationTest(StaticLiveServerTestCase):
         # outerHTML, not innerHTML: the shell is never duplicated.
         self.assertEqual(self.page.locator("#main-content").count(), 1)
         self.assertEqual(self.page.locator("#sidebar-nav").count(), 1)
+
+    def test_the_breadcrumb_back_to_the_show_soft_navigates(self):
+        """A season page links back to its show, and that is the same swap."""
+        season_path = "/details/tmdb/tv/1396/breaking-bad/season/1"
+        self.page.goto(f"{self.live_server_url}{season_path}")
+        self.page.evaluate("window.__softNavSentinel = 21")
+
+        breadcrumb = self.page.locator("#main-content h2 a").first
+        href = breadcrumb.get_attribute("href")
+        breadcrumb.click()
+
+        expect(self.page).to_have_url(f"{self.live_server_url}{href}")
+        self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 21)
+        self.assertEqual(self.page.locator("#main-content").count(), 1)
+
+    def test_the_season_dropdown_keeps_working_after_a_swap(self):
+        """The swapped page is Alpine-initialised, so its dropdown stays usable."""
+        base = f"{self.live_server_url}/details/tmdb/tv/1396/breaking-bad"
+        self.page.goto(f"{base}/season/1")
+        self.page.evaluate("window.__softNavSentinel = 5")
+
+        self.page.locator("#main-content").get_by_role(
+            "button",
+            name="Season 1",
+        ).click()
+        self.page.locator('#main-content a[href$="/season/2"]').first.click()
+
+        expect(self.page).to_have_url(f"{base}/season/2")
+        self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 5)
+
+        # The dropdown of the fresh page must react as well.
+        self.page.locator("#main-content").get_by_role(
+            "button",
+            name="Season 2",
+        ).click()
+        self.page.locator('#main-content a[href$="/season/1"]').first.click()
+
+        expect(self.page).to_have_url(f"{base}/season/1")
+        self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 5)
+        self.assertEqual(self.page.locator("#main-content").count(), 1)

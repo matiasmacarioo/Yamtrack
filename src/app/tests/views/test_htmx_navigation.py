@@ -1,12 +1,73 @@
 """The contract the shell navigation relies on."""
 
 import re
+from copy import deepcopy
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from app.models import Item, MediaTypes, Movie, Sources, Status
+
+# Metadata for a two season show, so a season page can render its dropdown.
+TV_WITH_SEASONS_METADATA = {
+    "title": "Test TV Show",
+    "media_type": MediaTypes.TV.value,
+    "source": Sources.TMDB.value,
+    "media_id": "123",
+    "image": "https://example.com/tv.jpg",
+    "max_progress": 2,
+    "related": {
+        "seasons": [
+            {
+                "media_type": MediaTypes.SEASON.value,
+                "source": Sources.TMDB.value,
+                "media_id": "123",
+                "season_number": 1,
+                "season_title": "Season 1",
+                "max_progress": 1,
+                "first_air_date": "2020-01-01",
+            },
+            {
+                "media_type": MediaTypes.SEASON.value,
+                "source": Sources.TMDB.value,
+                "media_id": "123",
+                "season_number": 2,
+                "season_title": "Season 2",
+                "max_progress": 1,
+                "first_air_date": "2021-01-01",
+            },
+        ],
+    },
+    "season/1": {
+        "title": "Test TV Show",
+        "media_type": MediaTypes.SEASON.value,
+        "source": Sources.TMDB.value,
+        "media_id": "123",
+        "season_number": 1,
+        "season_title": "Season 1",
+        "image": "https://example.com/s1.jpg",
+        "max_progress": 1,
+        "episodes": [
+            {
+                "episode_number": 1,
+                "air_date": "2020-01-01",
+                "still_path": None,
+                "name": "Pilot",
+                "overview": "The first one.",
+                "runtime": 45,
+            },
+        ],
+        "related": {},
+    },
+}
+
+
+def fresh_metadata(*args, **kwargs):  # noqa: ARG001
+    """Hand the view its own copy: season_details rewrites the episodes list."""
+    return deepcopy(TV_WITH_SEASONS_METADATA)
+
 
 # Every destination the sidebar takes an authenticated user to, as a path.
 SIDEBAR_PATHS = [
@@ -264,3 +325,67 @@ class MediaLinkSoftNavigationTest(TestCase):
         self.assertIn('id="main-content"', content)
         self.assertIn('id="sidebar-nav"', content)
         self.assertIn('id="sidebar-footer"', content)
+
+
+class TvDetailSoftNavigationTest(TestCase):
+    """Drilling into a show and between its seasons is the same swap."""
+
+    def setUp(self):
+        """Log a user in; the metadata comes from a stub, not the provider."""
+        self.user = get_user_model().objects.create_user(
+            username="test",
+            email="test@test.com",
+            password="testpass",  # noqa: S106
+        )
+        self.client.login(username="test", password="testpass")  # noqa: S106
+
+        self.show_path = reverse(
+            "media_details",
+            kwargs={
+                "source": Sources.TMDB.value,
+                "media_type": MediaTypes.TV.value,
+                "media_id": "123",
+                "title": "test-tv-show",
+            },
+        )
+        self.season_path = reverse(
+            "season_details",
+            kwargs={
+                "source": Sources.TMDB.value,
+                "media_id": "123",
+                "title": "test-tv-show",
+                "season_number": 1,
+            },
+        )
+        self.other_season_path = f"{self.season_path.rsplit('/', 1)[0]}/2"
+
+    def _assert_soft_navigation(self, content, href, expected):
+        """Every anchor on that href must carry the navigation contract."""
+        tags = re.findall(rf'<a[^>]*href="{re.escape(href)}"[^>]*>', content)
+
+        self.assertEqual(len(tags), expected, href)
+        for tag in tags:
+            self.assertIn('hx-boost="true"', tag)
+            self.assertIn('hx-target="#main-content"', tag)
+            self.assertIn('hx-select="#main-content"', tag)
+            self.assertIn('hx-swap="outerHTML"', tag)
+            self.assertIn('hx-select-oob="#sidebar-nav,#sidebar-footer"', tag)
+            self.assertIn("X-Soft-Navigation", tag)
+
+    @patch("app.providers.services.get_media_metadata", side_effect=fresh_metadata)
+    def test_the_breadcrumb_back_to_the_show_soft_navigates(self, _mock):
+        """The title above a season links to its show: a detail link too."""
+        response = self.client.get(self.season_path)
+
+        self.assertEqual(response.status_code, 200)
+        self._assert_soft_navigation(response.content.decode(), self.show_path, 1)
+
+    @patch("app.providers.services.get_media_metadata", side_effect=fresh_metadata)
+    def test_the_season_dropdown_soft_navigates(self, _mock):
+        """Both seasons are listed, and each is the same kind of swap."""
+        response = self.client.get(self.season_path)
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self._assert_soft_navigation(content, self.season_path, 1)
+        self._assert_soft_navigation(content, self.other_season_path, 1)
