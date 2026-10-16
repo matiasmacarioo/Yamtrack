@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from django import template
@@ -312,6 +313,26 @@ def media_url(media):
             "media_id": media_id,
             "title": slug(title),
         },
+    )
+
+
+@register.simple_tag
+def soft_nav_attrs():
+    """Return the htmx attributes that turn a link into an in-place navigation.
+
+    A soft navigation asks for the whole page (so the server can keep serving
+    partials to plain HTMX requests) and ``hx-select`` keeps only
+    ``#main-content``, replacing the very same node. The out-of-band targets
+    refresh the sidebar highlight, exactly like the boosted links do. The
+    ``X-Soft-Navigation`` header tells views that also answer fragments (the
+    media list, the journal) that this request needs the full page.
+    """
+    headers = json.dumps({"X-Soft-Navigation": "true"})
+    return format_html(
+        'hx-boost="true" hx-target="#main-content" hx-select="#main-content" '
+        'hx-swap="outerHTML" hx-select-oob="#sidebar-nav,#sidebar-footer" '
+        'hx-push-url="true" hx-headers="{}"',
+        headers,
     )
 
 

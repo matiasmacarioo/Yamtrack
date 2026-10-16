@@ -184,3 +184,83 @@ class ShellNavigationTest(TestCase):
         content = response.content.decode()
 
         self.assertIn("htmx-alpine.js", content)
+
+
+class MediaLinkSoftNavigationTest(TestCase):
+    """Opening a detail from a list is the same swap, triggered from a card."""
+
+    def setUp(self):
+        """Create a user with one tracked movie, mirroring the shell test."""
+        self.user = get_user_model().objects.create_user(
+            username="test",
+            email="test@test.com",
+            password="testpass",  # noqa: S106
+        )
+        self.client.login(username="test", password="testpass")  # noqa: S106
+
+        item = Item.objects.create(
+            media_id="603",
+            source=Sources.TMDB.value,
+            media_type=MediaTypes.MOVIE.value,
+            title="Test Movie",
+            image="http://example.com/image.jpg",
+        )
+        Movie.objects.create(
+            item=item,
+            user=self.user,
+            status=Status.IN_PROGRESS.value,
+        )
+
+        self.detail_path = reverse(
+            "media_details",
+            kwargs={
+                "source": Sources.TMDB.value,
+                "media_type": MediaTypes.MOVIE.value,
+                "media_id": "603",
+                "title": "test-movie",
+            },
+        )
+
+    def _detail_link(self, content):
+        """Return the anchor that points at the movie detail page."""
+        match = re.search(
+            rf'<a[^>]*href="{re.escape(self.detail_path)}"[^>]*>',
+            content,
+        )
+        self.assertIsNotNone(match, "the card should link to the detail page")
+        return match.group(0)
+
+    def _assert_soft_navigation(self, tag):
+        """Assert the link carries the same contract the sidebar relies on."""
+        self.assertIn('hx-boost="true"', tag)
+        self.assertIn('hx-target="#main-content"', tag)
+        self.assertIn('hx-select="#main-content"', tag)
+        self.assertIn('hx-swap="outerHTML"', tag)
+        self.assertIn('hx-select-oob="#sidebar-nav,#sidebar-footer"', tag)
+        self.assertIn('hx-push-url="true"', tag)
+        self.assertIn("X-Soft-Navigation", tag)
+
+    def test_a_grid_card_soft_navigates_to_the_detail(self):
+        """The poster/title link must not reload the shell."""
+        response = self.client.get(f"/{self.user.username}/movie?layout=grid")
+
+        self._assert_soft_navigation(self._detail_link(response.content.decode()))
+
+    def test_a_table_row_soft_navigates_to_the_detail(self):
+        """The table title link keeps the same contract as the grid card."""
+        response = self.client.get(f"/{self.user.username}/movie?layout=table")
+
+        self._assert_soft_navigation(self._detail_link(response.content.decode()))
+
+    def test_the_detail_page_answers_with_the_fragment(self):
+        """A soft navigation needs the whole page to pick #main-content out."""
+        response = self.client.get(
+            self.detail_path,
+            headers={"HX-Request": "true", "X-Soft-Navigation": "true"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('id="main-content"', content)
+        self.assertIn('id="sidebar-nav"', content)
+        self.assertIn('id="sidebar-footer"', content)

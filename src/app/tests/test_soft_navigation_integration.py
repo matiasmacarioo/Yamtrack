@@ -130,3 +130,28 @@ class SoftNavigationTest(StaticLiveServerTestCase):
         expect(
             self.page.locator('#sidebar-footer a[href="/settings/account"]'),
         ).to_have_class(re.compile(r"\btext-white\b"))
+
+    def test_a_card_link_soft_navigates_to_the_detail(self):
+        """Opening a detail from a list is the same swap, from another link."""
+        detail_path = "/details/tmdb/movie/603/test-movie"
+        self.page.goto(f"{self.live_server_url}/test/movie")
+        self.page.evaluate("window.__softNavSentinel = 99")
+
+        # The title anchor sits below the hover overlay, so the tap is reliable.
+        with self.page.expect_request(
+            lambda request: detail_path in request.url,
+        ) as request_info:
+            self.page.locator(f'#main-content a[href="{detail_path}"]').last.click()
+
+        # htmx must unescape the entity-encoded JSON in hx-headers, otherwise
+        # the server would mistake this navigation for a fragment fetch.
+        headers = request_info.value.headers
+        self.assertEqual(headers.get("hx-request"), "true")
+        self.assertEqual(headers.get("x-soft-navigation"), "true")
+
+        expect(self.page).to_have_url(f"{self.live_server_url}{detail_path}")
+        # A full page load would have wiped the sentinel.
+        self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 99)
+        # outerHTML, not innerHTML: the shell is never duplicated.
+        self.assertEqual(self.page.locator("#main-content").count(), 1)
+        self.assertEqual(self.page.locator("#sidebar-nav").count(), 1)

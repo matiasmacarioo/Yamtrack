@@ -31,7 +31,8 @@
     <td class="p-2 pe-8 font-medium">
       <div class=" flex justify-between items-center">
         <a href="{{ media.item|media_url }}"
-           class="hover:text-indigo-400 transition-colors line-clamp-1">{{ media.item }}</a>
+           class="hover:text-indigo-400 transition-colors line-clamp-1"
+           {% soft_nav_attrs %}>{{ media.item }}</a>
 
         {% if media.repeats > 1 %}
           <div class="flex items-center">
