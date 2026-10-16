@@ -10,8 +10,7 @@
     <div class="relative">
       <a href="{{ media.item|media_url }}"
          hx-boost="true"
-         hx-select-oob="#sidebar-nav,#sidebar-footer"
-         @click="if (typeof isMobileMenuOpen !== 'undefined') isMobileMenuOpen = false">
+         hx-select-oob="#sidebar-nav,#sidebar-footer">
         <img alt="{{ media }}"
              class="lazyload w-full aspect-2/3 {% if media.item.image != IMG_NONE %}object-cover{% endif %}"
              data-src="{{ media.item.image }}"
@@ -38,8 +37,7 @@
         <a href="{{ media.item|media_url }}"
            class="absolute inset-0 z-0"
            hx-boost="true"
-           hx-select-oob="#sidebar-nav,#sidebar-footer"
-           @click="if (typeof isMobileMenuOpen !== 'undefined') isMobileMenuOpen = false"></a>
+           hx-select-oob="#sidebar-nav,#sidebar-footer"></a>
 
         <div class="relative z-10 flex items-center justify-center space-x-2.5">
           <button class="cursor-pointer rounded-full bg-indigo-600 p-2.5 text-white transition-all duration-200 hover:scale-110 hover:bg-indigo-500 hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]"
@@ -98,8 +96,7 @@
          class="line-clamp-1 text-center text-sm font-semibold text-white transition duration-300 {% if home_status == Status.PLANNING.value %}hover:text-sky-400{% else %}hover:text-indigo-400{% endif %}"
          title="{{ media }}"
          hx-boost="true"
-         hx-select-oob="#sidebar-nav,#sidebar-footer"
-         @click="if (typeof isMobileMenuOpen !== 'undefined') isMobileMenuOpen = false">{{ media }}</a>
+         hx-select-oob="#sidebar-nav,#sidebar-footer">{{ media }}</a>
     </div>
 
     {% if home_status == Status.PLANNING.value %}
