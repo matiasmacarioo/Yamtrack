@@ -54,8 +54,10 @@
           {# TV-level items trade the history button for an explicit Sonarr action #}
           {% sonarr_add_url media.item as sonarr_url %}
           {% if sonarr_url and SONARR_ENABLED and media.item.source != Sources.MANUAL.value %}
-            <form method="post"
-                  action="{{ sonarr_url }}"
+            <form hx-post="{{ sonarr_url }}"
+                  hx-target="#main-content"
+                  hx-select="#main-content"
+                  hx-swap="outerHTML show:none"
                   x-data="{ loading: false }"
                   @submit="loading = true">
               {% csrf_token %}

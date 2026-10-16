@@ -596,9 +596,17 @@ def _back_to_media(request):
     next_url = request.POST.get("next")
 
     if request.headers.get("HX-Request"):
+        payload = {
+            "path": next_url or "/",
+            "target": "#main-content",
+            "select": "#main-content",
+            "swap": "outerHTML show:none",
+            "source": "#action-navigation",
+            "headers": {"X-Soft-Navigation": "true"},
+        }
         return HttpResponse(
             status=204,
-            headers={"HX-Redirect": next_url or "/"},
+            headers={"HX-Location": json.dumps(payload)},
         )
 
     if next_url:
