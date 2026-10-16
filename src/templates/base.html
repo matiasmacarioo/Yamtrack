@@ -74,7 +74,16 @@
             {% block sidebar_own_media %}
               <ul class="space-y-1 mb-6">
                 <li>
+                  {# First link migrated to the shell: a boosted click swaps only
+                     the main content block, so the sidebar, the search bar and
+                     the messages stay untouched. #}
                   <a href="{% url 'home' %}"
+                     hx-boost="true"
+                     hx-target="#main-content"
+                     hx-select="#main-content"
+                     hx-swap="innerHTML"
+                     hx-push-url="true"
+                     hx-headers='{"X-Soft-Navigation": "true"}'
                      class="flex items-center space-x-3 px-4 py-2 rounded-md transition-colors duration-200 text-sm {% if request.path == "/" %}text-white bg-[#2c3136]{% else %}text-gray-400 hover:text-white hover:bg-[#23272b]{% endif %}">
                     {% if request.path|str_equals:"/" %}
                       {% include "app/icons/house.svg" with classes="w-5 h-5 text-indigo-400 " %}
@@ -309,7 +318,7 @@
           </div>
 
           <main class="flex-1 relative bg-[#212529]">
-            <div class="container mx-auto px-8 py-12">
+            <div id="main-content" class="container mx-auto px-8 py-12">
               {% block content %}
               {% endblock content %}
             </div>
@@ -344,6 +353,8 @@
       }
     </script>
 
+    <script src="{% static 'js/htmx-alpine.js' %}{% get_static_file_mtime 'js/htmx-alpine.js' %}"></script>
+    <script src="{% static 'js/htmx-navigation.js' %}{% get_static_file_mtime 'js/htmx-navigation.js' %}"></script>
     <script src="{% static 'js/mediaStatusDateHandler.js' %}{% get_static_file_mtime 'js/mediaStatusDateHandler.js' %}"></script>
     <script src="{% static 'js/searchShortcut.js' %}{% get_static_file_mtime 'js/searchShortcut.js' %}"></script>
   </body>
