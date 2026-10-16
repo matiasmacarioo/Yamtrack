@@ -110,13 +110,16 @@
         </div>
 
         <!-- Layout Toggle -->
+        {% url 'medialist' target_user.username media_type as medialist_url %}
         <div class="flex rounded-md overflow-hidden border border-gray-700">
-          <a :href="`{% url 'medialist' target_user.username media_type %}?${search ? 'search=' + search + '&' : ''}${status !== 'all' ? 'status=' + status + '&' : ''}${sort !== 'score' ? 'sort=' + sort + '&' : ''}layout=grid`"
+          <a href="{{ medialist_url }}?layout=grid"
+             {% soft_nav_attrs get=medialist_url include="#filter-form" layout="grid" %}
              class="p-2 cursor-pointer"
              :class="layout === 'grid' ? 'bg-indigo-600 text-white' : 'bg-[#39404b] hover:bg-[#454d5a]'"
              title="Grid View"
              @click="layout = 'grid'">{% include "app/icons/four-square.svg" with classes="w-5 h-5" %}</a>
-          <a :href="`{% url 'medialist' target_user.username media_type %}?${search ? 'search=' + search + '&' : ''}${status !== 'all' ? 'status=' + status + '&' : ''}${sort !== 'score' ? 'sort=' + sort + '&' : ''}layout=table`"
+          <a href="{{ medialist_url }}?layout=table"
+             {% soft_nav_attrs get=medialist_url include="#filter-form" layout="table" %}
              class="p-2 cursor-pointer"
              :class="layout === 'table' ? 'bg-indigo-600 text-white' : 'bg-[#39404b] hover:bg-[#454d5a]'"
              title="Table View"

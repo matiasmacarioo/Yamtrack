@@ -317,7 +317,7 @@ def media_url(media):
 
 
 @register.simple_tag
-def soft_nav_attrs():
+def soft_nav_attrs(get=None, include=None, layout=None):
     """Return the htmx attributes that turn a link into an in-place navigation.
 
     A soft navigation asks for the whole page (so the server can keep serving
@@ -326,12 +326,33 @@ def soft_nav_attrs():
     refresh the sidebar highlight, exactly like the boosted links do. The
     ``X-Soft-Navigation`` header tells views that also answer fragments (the
     media list, the journal) that this request needs the full page.
+
+    A link is boosted by default, which is enough when its own ``href`` already
+    carries everything the request needs. Boost reads that ``href`` once, when
+    htmx processes the node, so a link whose query has to follow state the
+    server did not render (the filters as they are typed) builds its own
+    request instead: pass ``get`` for the URL, ``include`` for the form holding
+    that state, and ``layout`` for the media list layout to switch to. The JSON
+    is built here rather than in the template: a quoted template argument is
+    marked safe, so it would reach ``hx-vals`` unescaped and the attribute
+    would end at its first inner quote.
     """
     headers = json.dumps({"X-Soft-Navigation": "true"})
+
+    if get is None:
+        trigger = format_html('hx-boost="true"')
+    else:
+        trigger = format_html('hx-get="{}"', get)
+        if include:
+            trigger += format_html(' hx-include="{}"', include)
+        if layout:
+            trigger += format_html(' hx-vals="{}"', json.dumps({"layout": layout}))
+
     return format_html(
-        'hx-boost="true" hx-target="#main-content" hx-select="#main-content" '
+        '{} hx-target="#main-content" hx-select="#main-content" '
         'hx-swap="outerHTML" hx-select-oob="#sidebar-nav,#sidebar-footer" '
         'hx-push-url="true" hx-headers="{}"',
+        trigger,
         headers,
     )
 

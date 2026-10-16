@@ -389,3 +389,87 @@ class TvDetailSoftNavigationTest(TestCase):
         content = response.content.decode()
         self._assert_soft_navigation(content, self.season_path, 1)
         self._assert_soft_navigation(content, self.other_season_path, 1)
+
+
+class LayoutToggleSoftNavigationTest(TestCase):
+    """Switching the list layout swaps the page, filters and all."""
+
+    def setUp(self):
+        """Track one movie, so the list renders with its toolbar."""
+        self.user = get_user_model().objects.create_user(
+            username="test",
+            email="test@test.com",
+            password="testpass",  # noqa: S106
+        )
+        self.client.login(username="test", password="testpass")  # noqa: S106
+
+        item = Item.objects.create(
+            media_id="603",
+            source=Sources.TMDB.value,
+            media_type=MediaTypes.MOVIE.value,
+            title="Test Movie",
+            image="http://example.com/image.jpg",
+        )
+        Movie.objects.create(
+            item=item,
+            user=self.user,
+            status=Status.IN_PROGRESS.value,
+        )
+
+        self.list_path = reverse(
+            "medialist",
+            kwargs={
+                "username": self.user.username,
+                "media_type": MediaTypes.MOVIE.value,
+            },
+        )
+
+    def _layout_link(self, content, layout):
+        """Return the toolbar anchor that switches to that layout."""
+        title = "Grid View" if layout == "grid" else "Table View"
+        match = re.search(rf'<a[^>]*title="{title}"[^>]*>', content)
+
+        self.assertIsNotNone(match, f"the {layout} toggle should be a link")
+        return match.group(0)
+
+    def test_the_layout_toggle_is_a_soft_navigation(self):
+        """Both toggles keep the shell and hand the live filters to the server."""
+        response = self.client.get(f"{self.list_path}?layout=grid")
+        content = response.content.decode()
+
+        for layout in ("grid", "table"):
+            with self.subTest(layout=layout):
+                tag = self._layout_link(content, layout)
+
+                # hx-get, not hx-boost: boost reads the href only once, when
+                # htmx processes the node, so it would send the filters of the
+                # last full page load instead of the ones on screen now.
+                self.assertNotIn("hx-boost", tag)
+                self.assertIn(f'hx-get="{self.list_path}"', tag)
+                self.assertIn('hx-include="#filter-form"', tag)
+                self.assertIn(f"&quot;layout&quot;: &quot;{layout}&quot;", tag)
+
+                self.assertIn('hx-target="#main-content"', tag)
+                self.assertIn('hx-select="#main-content"', tag)
+                self.assertIn('hx-swap="outerHTML"', tag)
+                self.assertIn('hx-select-oob="#sidebar-nav,#sidebar-footer"', tag)
+                self.assertIn('hx-push-url="true"', tag)
+                self.assertIn("X-Soft-Navigation", tag)
+
+    def test_the_layout_toggle_keeps_a_real_href(self):
+        """A browser without htmx can still follow the anchor."""
+        response = self.client.get(f"{self.list_path}?layout=grid")
+
+        self.assertIn(
+            f'href="{self.list_path}?layout=grid"',
+            response.content.decode(),
+        )
+
+    def test_a_layout_change_can_be_reloaded(self):
+        """The pushed URL has to reproduce the page it came from."""
+        response = self.client.get(f"{self.list_path}?layout=table")
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<tbody>", content)
+        self.assertNotIn('class="media-grid"', content)

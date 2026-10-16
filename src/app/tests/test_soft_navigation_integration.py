@@ -195,3 +195,59 @@ class SoftNavigationTest(StaticLiveServerTestCase):
         expect(self.page).to_have_url(f"{base}/season/1")
         self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 5)
         self.assertEqual(self.page.locator("#main-content").count(), 1)
+
+    def test_the_layout_toggle_swaps_the_list_in_place(self):
+        """Grid and table are two pages of the same list, swapped, not loaded."""
+        self.page.goto(f"{self.live_server_url}/test/movie")
+        expect(self.page.locator(".media-grid")).to_be_visible()
+        self.page.evaluate("window.__softNavSentinel = 13")
+
+        self.page.click('#main-content a[title="Table View"]')
+
+        # The rows replace the cards: the layout really changed.
+        expect(self.page.locator("#main-content tbody")).to_be_visible()
+        self.assertEqual(self.page.locator(".media-grid").count(), 0)
+        # hx-push-url keeps the address bar shareable.
+        expect(self.page).to_have_url(re.compile(r"layout=table"))
+        # The filters travel with the request, so they survive the swap.
+        expect(self.page).to_have_url(re.compile(r"sort="))
+        self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 13)
+        self.assertEqual(self.page.locator("#main-content").count(), 1)
+        self.assertEqual(self.page.locator("#sidebar-nav").count(), 1)
+
+        # And back to the grid, still without reloading the document.
+        self.page.click('#main-content a[title="Grid View"]')
+
+        expect(self.page.locator(".media-grid")).to_be_visible()
+        expect(self.page).to_have_url(re.compile(r"layout=grid"))
+        self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 13)
+        self.assertEqual(self.page.locator("#main-content").count(), 1)
+
+    def test_the_layout_toggle_carries_the_filters_as_typed(self):
+        """The toggle builds its request when it is sent.
+
+        Boost reads the link's href once, at page load, so it would replay the
+        filters of that load and quietly drop a search typed since. hx-include
+        hands over the form as it is now instead.
+        """
+        self.page.goto(f"{self.live_server_url}/test/movie")
+        search = self.page.locator('#main-content input[type="text"][x-model="search"]')
+        # fill() only fires input events; the field searches on keyup.
+        search.press_sequentially("zzz")
+        # The movie no longer matches, so the grid emptied in place.
+        expect(self.page.locator(".media-grid a")).to_have_count(0)
+
+        self.page.click('#main-content a[title="Table View"]')
+
+        expect(self.page).to_have_url(re.compile(r"search=zzz"))
+        expect(self.page).to_have_url(re.compile(r"layout=table"))
+        # The server searched for "zzz": had the typed filter been dropped, the
+        # movie would have come back as a row instead of the empty state.
+        expect(self.page.locator("#empty_list")).to_be_visible()
+        self.assertEqual(self.page.locator("#main-content tbody").count(), 0)
+        # The filters are part of the page, so the form comes back filled and
+        # the swapped page is initialised with the layout it was served with.
+        expect(search).to_have_value("zzz")
+        expect(
+            self.page.locator('#main-content a[title="Table View"]'),
+        ).to_have_class(re.compile(r"\bbg-indigo-600\b"))
