@@ -69,25 +69,59 @@ class ShellNavigationTest(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertIn('id="main-content"', response.content.decode())
 
-    def test_only_the_home_link_is_boosted_for_now(self):
-        """Step 1 migrates a single link; the contract lives on that anchor."""
+    def test_the_sidebar_navigation_is_boosted(self):
+        """Boosted links swap #main-content; the sidebar follows out of band."""
         response = self.client.get(reverse("home"))
         content = response.content.decode()
 
-        anchors = re.findall(r"<a\b[^>]*>", content)
-        boosted = [anchor for anchor in anchors if "hx-boost" in anchor]
+        nav = re.search(r"<nav\b[^>]*>", content)
+        self.assertIsNotNone(nav)
+        self.assertIn('hx-boost="true"', nav.group(0))
 
-        self.assertEqual(len(boosted), 1, "only the Home link should be boosted")
-        link = boosted[0]
+        # The configuration lives once on the aside; every boosted link inside
+        # inherits it, so a click never repeats it per link.
+        aside = re.search(r"<aside\b[^>]*>", content)
+        self.assertIsNotNone(aside)
+        aside_tag = aside.group(0)
+        self.assertIn('id="sidebar"', aside_tag)
+        self.assertIn('hx-target="#main-content"', aside_tag)
+        self.assertIn('hx-select="#main-content"', aside_tag)
+        self.assertIn('hx-swap="outerHTML"', aside_tag)
+        self.assertIn('hx-select-oob="#sidebar"', aside_tag)
+        self.assertIn('hx-push-url="true"', aside_tag)
+        self.assertIn("X-Soft-Navigation", aside_tag)
 
-        # it still points at the real URL, so it works without JavaScript
-        self.assertIn('href="/"', link)
-        self.assertIn('hx-boost="true"', link)
-        self.assertIn('hx-target="#main-content"', link)
-        self.assertIn('hx-select="#main-content"', link)
-        self.assertIn('hx-swap="outerHTML"', link)
-        self.assertIn('hx-push-url="true"', link)
-        self.assertIn("X-Soft-Navigation", link)
+    def test_the_settings_link_is_boosted_but_logout_is_not(self):
+        """Settings sits outside the nav, so it carries its own boost."""
+        response = self.client.get(reverse("home"))
+        content = response.content.decode()
+
+        settings = re.search(r'<a href="/settings/account"[^>]*>', content)
+        self.assertIsNotNone(settings)
+        self.assertIn('hx-boost="true"', settings.group(0))
+
+        # Logging out leaves the shell, so it must stay a plain form post.
+        logout = re.search(r'<form[^>]*action="/accounts/logout/"[^>]*>', content)
+        self.assertIsNotNone(logout)
+        self.assertNotIn("hx-boost", logout.group(0))
+
+    def test_a_soft_navigation_carries_both_main_content_and_sidebar(self):
+        """The out-of-band sidebar swap needs the sidebar in the response."""
+        response = self.client.get(
+            reverse("home"),
+            headers={"HX-Request": "true", "X-Soft-Navigation": "true"},
+        )
+        content = response.content.decode()
+
+        self.assertIn('id="main-content"', content)
+        self.assertIn('id="sidebar"', content)
+
+    def test_a_partial_refresh_does_not_drag_the_sidebar_along(self):
+        """Only a full page carries the sidebar, so its id can never collide."""
+        response = self.client.get("/test/movie", headers={"HX-Request": "true"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('id="sidebar"', response.content.decode())
 
     def test_a_boosted_home_request_returns_the_full_page(self):
         """hx-select can only find the fragment if the page is served whole."""
