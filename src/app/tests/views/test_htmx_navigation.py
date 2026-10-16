@@ -1,5 +1,6 @@
 """The contract the shell navigation relies on."""
 
+import json
 import re
 from copy import deepcopy
 from unittest.mock import patch
@@ -88,6 +89,22 @@ SIDEBAR_PATHS = [
 ]
 
 
+# The shell parts a boosted link refreshes out of band. The aside declares the
+# list and every boosted link inherits it.
+LINK_OOB_TARGETS = "#sidebar-nav,#sidebar-footer"
+
+# The same for a navigation an action triggers. HX-Location cannot carry an
+# out-of-band list, so redirect_back points its source at the shell element that
+# declares this one. It adds the message stack a save fills, appended so a toast
+# already on screen survives.
+ACTION_OOB_TARGETS = (
+    "#sidebar-nav",
+    "#sidebar-footer",
+    "#messages-list:beforeend",
+    "#persistent-messages-actions",
+)
+
+
 class ShellNavigationTest(TestCase):
     """A boosted click swaps #main-content, so that fragment must always exist."""
 
@@ -150,9 +167,19 @@ class ShellNavigationTest(TestCase):
         self.assertIn('hx-target="#main-content"', aside_tag)
         self.assertIn('hx-select="#main-content"', aside_tag)
         self.assertIn('hx-swap="outerHTML"', aside_tag)
-        self.assertIn('hx-select-oob="#sidebar-nav,#sidebar-footer"', aside_tag)
+        self.assertIn(f'hx-select-oob="{LINK_OOB_TARGETS}"', aside_tag)
         self.assertIn('hx-push-url="true"', aside_tag)
         self.assertIn("X-Soft-Navigation", aside_tag)
+
+    def test_the_action_navigation_declares_the_message_stack(self):
+        """A save is what fills the toasts, and HX-Location cannot say so."""
+        response = self.client.get(reverse("home"))
+        content = response.content.decode()
+
+        carrier = re.search(r'<div id="action-navigation"[^>]*>', content)
+        self.assertIsNotNone(carrier)
+        expected = ",".join(ACTION_OOB_TARGETS)
+        self.assertIn(f'hx-select-oob="{expected}"', carrier.group(0))
 
     def test_the_out_of_band_targets_never_replace_the_aside(self):
         """Swapping the aside would drop the Alpine :class that drives the menu.
@@ -169,10 +196,10 @@ class ShellNavigationTest(TestCase):
         self.assertIsNotNone(oob)
 
         targets = oob.group(1).split(",")
-        self.assertEqual(targets, ["#sidebar-nav", "#sidebar-footer"])
+        self.assertEqual(targets, LINK_OOB_TARGETS.split(","))
         self.assertNotIn("#sidebar", targets)
-        self.assertIn('id="sidebar-nav"', content)
-        self.assertIn('id="sidebar-footer"', content)
+        for target in targets:
+            self.assertIn(f'id="{target.lstrip("#")}"', content)
 
     def test_the_mobile_menu_uses_a_class_binding(self):
         """x-show on the overlay is lost once content is swapped; :class is not."""
@@ -198,8 +225,8 @@ class ShellNavigationTest(TestCase):
         self.assertIsNotNone(logout)
         self.assertNotIn("hx-boost", logout.group(0))
 
-    def test_a_soft_navigation_carries_both_main_content_and_sidebar(self):
-        """The out-of-band swap needs the nav and footer in the response."""
+    def test_a_soft_navigation_carries_every_out_of_band_target(self):
+        """hx-select-oob finds nothing if the answer does not hold the part."""
         response = self.client.get(
             reverse("home"),
             headers={"HX-Request": "true", "X-Soft-Navigation": "true"},
@@ -208,8 +235,9 @@ class ShellNavigationTest(TestCase):
 
         self.assertIn('id="main-content"', content)
         self.assertIn('id="sidebar"', content)
-        self.assertIn('id="sidebar-nav"', content)
-        self.assertIn('id="sidebar-footer"', content)
+        for raw in [*LINK_OOB_TARGETS.split(","), *ACTION_OOB_TARGETS]:
+            target = raw.split(":")[0].strip()
+            self.assertIn(f'id="{target.lstrip("#")}"', content)
 
     def test_a_partial_refresh_does_not_drag_the_sidebar_along(self):
         """Only a full page carries the sidebar, so its id can never collide."""
@@ -473,3 +501,129 @@ class LayoutToggleSoftNavigationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("<tbody>", content)
         self.assertNotIn('class="media-grid"', content)
+
+
+class PostSoftNavigationTest(TestCase):
+    """A save from a modal navigates like a link: only #main-content changes."""
+
+    def setUp(self):
+        """Track one manual movie, so the detail page needs no provider call."""
+        self.user = get_user_model().objects.create_user(
+            username="test",
+            email="test@test.com",
+            password="testpass",  # noqa: S106
+        )
+        self.client.login(username="test", password="testpass")  # noqa: S106
+
+        item = Item.objects.create(
+            media_id="manual-movie-1",
+            source=Sources.MANUAL.value,
+            media_type=MediaTypes.MOVIE.value,
+            title="Test Movie",
+            image="http://example.com/image.jpg",
+        )
+        self.movie = Movie.objects.create(
+            item=item,
+            user=self.user,
+            status=Status.IN_PROGRESS.value,
+        )
+
+        self.detail_path = reverse(
+            "media_details",
+            kwargs={
+                "source": Sources.MANUAL.value,
+                "media_type": MediaTypes.MOVIE.value,
+                "media_id": "manual-movie-1",
+                "title": "test-movie",
+            },
+        )
+
+    def _save_data(self, **overrides):
+        """Return the payload the track modal submits."""
+        data = {
+            "instance_id": str(self.movie.id),
+            "media_type": MediaTypes.MOVIE.value,
+            "source": Sources.MANUAL.value,
+            "media_id": "manual-movie-1",
+            "status": Status.COMPLETED.value,
+            "score": "8",
+            "notes": "",
+        }
+        data.update(overrides)
+        return data
+
+    def _hx_post(self, view_name, data):
+        """POST the way the modal does: HTMX headers, the target in ?next."""
+        return self.client.post(
+            f"{reverse(view_name)}?next={self.detail_path}",
+            data,
+            headers={"HX-Request": "true"},
+        )
+
+    def _assert_navigates_through_the_shell(self, response):
+        """Check that the answer hands htmx the shell's own navigation."""
+        self.assertEqual(response.status_code, 204)
+        location = json.loads(response["HX-Location"])
+        self.assertEqual(location["path"], self.detail_path)
+        self.assertEqual(location["target"], "#main-content")
+        self.assertEqual(location["select"], "#main-content")
+        self.assertEqual(location["swap"], "outerHTML show:none")
+        self.assertEqual(location["headers"]["X-Soft-Navigation"], "true")
+
+        # The source has to be a real element of the shell that declares the
+        # out-of-band refresh. Without it htmx would swap #main-content and
+        # leave the sidebar highlight and the toast behind.
+        page = self.client.get(
+            location["path"],
+            headers={"HX-Request": "true", "X-Soft-Navigation": "true"},
+        )
+        self.assertEqual(page.status_code, 200)
+        content = page.content.decode()
+        source = re.search(
+            rf'<[a-z]+[^>]*\bid="{re.escape(location["source"].lstrip("#"))}"[^>]*>',
+            content,
+        )
+        self.assertIsNotNone(
+            source,
+            f"{location['source']} must be part of the shell",
+        )
+        expected = ",".join(ACTION_OOB_TARGETS)
+        self.assertIn(f'hx-select-oob="{expected}"', source.group(0))
+        return content
+
+    def test_a_saved_media_navigates_through_the_shell(self):
+        """Saving updates the movie and re-renders the page in place."""
+        response = self._hx_post("media_save", self._save_data())
+
+        self._assert_navigates_through_the_shell(response)
+        self.movie.refresh_from_db()
+        self.assertEqual(self.movie.status, Status.COMPLETED.value)
+
+    def test_a_save_that_fails_still_delivers_its_message(self):
+        """The error toast has to travel with the page the save lands on."""
+        response = self._hx_post(
+            "media_save",
+            self._save_data(status="Not a status"),
+        )
+
+        content = self._assert_navigates_through_the_shell(response)
+        self.movie.refresh_from_db()
+        self.assertEqual(self.movie.status, Status.IN_PROGRESS.value)
+        # One container only: the detail page holds no progress changer, so the
+        # out-of-band select cannot land on a duplicate and drop the toast.
+        self.assertEqual(content.count('id="messages-list"'), 1)
+        self.assertIn("Status: Select a valid choice", content)
+        self.assertIn("toast-error", content)
+
+    def test_a_deleted_media_navigates_through_the_shell(self):
+        """Deleting from the modal is the very same navigation."""
+        response = self._hx_post(
+            "media_delete",
+            {
+                "instance_id": str(self.movie.id),
+                "media_type": MediaTypes.MOVIE.value,
+            },
+        )
+
+        self._assert_navigates_through_the_shell(response)
+        self.assertFalse(Movie.objects.filter(id=self.movie.id).exists())

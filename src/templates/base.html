@@ -68,6 +68,7 @@
         {# Sidebar #}
         {# Every boosted link inside inherits the hx-* config below, so a click swaps only #main-content. #}
         {# hx-select-oob refreshes just the inner nav + footer so the active highlight follows the new URL. #}
+        {# soft_nav_attrs spells the same contract out per link. #}
         {# The aside itself is never swapped: it owns the Alpine :class for the mobile menu. #}
         <aside id="sidebar"
                class="fixed top-0 left-0 z-40 h-screen w-64 bg-[#1a1d20] transform transition-transform duration-300 ease-in-out border-r border-[#2c3136] -translate-x-full lg:translate-x-0 lg:sticky flex flex-col"
@@ -343,6 +344,11 @@
     </div>
 
     <div id="persistent-messages-actions">{% include "app/components/messages/persistent_messages_actions.html" %}</div>
+
+    {# The out-of-band list for the navigations an action triggers. HX-Location cannot carry one, #}
+    {# so redirect_back points its source here; a save is what fills the message stack. #}
+    <div id="action-navigation"
+         hx-select-oob="#sidebar-nav,#sidebar-footer,#messages-list:beforeend,#persistent-messages-actions"></div>
 
     {% block js %}
     {% endblock js %}

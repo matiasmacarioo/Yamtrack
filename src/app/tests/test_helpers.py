@@ -101,7 +101,7 @@ class HelpersTest(TestCase):
 
     @patch("app.helpers.url_has_allowed_host_and_scheme")
     def test_redirect_back_htmx_with_next(self, mock_url_check):
-        """HTMX requests get an HX-Location soft navigation instead of a reload."""
+        """HTMX requests get a shell navigation instead of a full reload."""
         mock_url_check.return_value = True
 
         request = MagicMock()
@@ -113,7 +113,13 @@ class HelpersTest(TestCase):
         self.assertEqual(result.status_code, 204)
         location = json.loads(result["HX-Location"])
         self.assertEqual(location["path"], "http://example.com/path?sort=name")
-        self.assertEqual(location["target"], "body")
+        # Only #main-content is replaced; the sidebar and the message stack a
+        # save may have filled come along out of band, through the contract the
+        # shell declares on #sidebar.
+        self.assertEqual(location["target"], "#main-content")
+        self.assertEqual(location["select"], "#main-content")
+        self.assertEqual(location["swap"], "outerHTML show:none")
+        self.assertEqual(location["source"], "#action-navigation")
         self.assertEqual(location["headers"]["X-Soft-Navigation"], "true")
 
     @patch("app.helpers.url_has_allowed_host_and_scheme")
@@ -130,6 +136,7 @@ class HelpersTest(TestCase):
         self.assertEqual(result.status_code, 204)
         location = json.loads(result["HX-Location"])
         self.assertEqual(location["path"], reverse("home"))
+        self.assertEqual(location["target"], "#main-content")
 
     @patch("app.helpers.messages")
     def test_form_error_messages(self, mock_messages):

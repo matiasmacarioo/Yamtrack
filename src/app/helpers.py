@@ -79,12 +79,19 @@ def minutes_to_hhmm(total_minutes):
 
 
 def redirect_back(request):
-    """Redirect to the previous page, removing the 'page' parameter if present.
+    """Send the browser back to where it came from, removing the 'page' parameter.
 
-    For HTMX requests, respond with an ``HX-Location`` header so htmx re-renders
-    the target page in place via an AJAX body swap instead of doing a full
-    browser reload. The ``X-Soft-Navigation`` marker tells partial-returning
-    views (e.g. the media list) to serve the full page for these navigations.
+    A plain form POST gets a plain redirect. An HTMX request gets a 204 with an
+    ``HX-Location`` header instead: htmx asks for the target page and swaps it in
+    place, so a save ends on the page it started from without a full reload.
+
+    That swap is the shell's own soft navigation, not a body replacement.
+    #main-content comes from the answer, while the sidebar highlight and the
+    message stack a save may have filled are refreshed out of band. HX-Location
+    cannot carry an out-of-band list, so ``source`` points at the shell element
+    that declares it, and htmx reads it from there. ``X-Soft-Navigation`` tells
+    partial-returning views (e.g. the media list) to serve the full page for
+    these navigations.
     """
     if url_has_allowed_host_and_scheme(request.GET.get("next"), None):
         next_url = request.GET["next"]
@@ -108,9 +115,13 @@ def redirect_back(request):
         response["HX-Location"] = json.dumps(
             {
                 "path": clean_url or reverse("home"),
-                "target": "body",
+                "target": "#main-content",
+                "select": "#main-content",
                 # show:none keeps the current scroll position after the swap
-                "swap": "innerHTML show:none",
+                "swap": "outerHTML show:none",
+                # htmx reads hx-select-oob from this element, so the shell
+                # refreshes through the contract base.html declares there.
+                "source": "#action-navigation",
                 "headers": {"X-Soft-Navigation": "true"},
             },
         )

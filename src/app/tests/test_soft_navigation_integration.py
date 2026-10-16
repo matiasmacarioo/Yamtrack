@@ -251,3 +251,51 @@ class SoftNavigationTest(StaticLiveServerTestCase):
         expect(
             self.page.locator('#main-content a[title="Table View"]'),
         ).to_have_class(re.compile(r"\bbg-indigo-600\b"))
+
+    def test_a_save_from_the_track_modal_stays_in_the_shell(self):
+        """Saving the modal re-renders the page in place, sidebar and all."""
+        # A manual movie keeps the detail page off the providers.
+        item = Item.objects.create(
+            media_id="manual-movie-e2e",
+            source=Sources.MANUAL.value,
+            media_type=MediaTypes.MOVIE.value,
+            title="Test Movie",
+            image="http://example.com/image.jpg",
+        )
+        Movie.objects.create(
+            item=item,
+            user=self.user,
+            status=Status.IN_PROGRESS.value,
+        )
+        detail_path = "/details/manual/movie/manual-movie-e2e/test-movie"
+
+        self.page.goto(f"{self.live_server_url}{detail_path}")
+        status_button = self.page.locator(
+            '#main-content button[hx-get*="track_modal"]',
+        ).first
+        expect(status_button).to_have_text(Status.IN_PROGRESS.label)
+
+        # A reload would wipe the sentinel; a body swap would throw the aside
+        # away, so probing it is what tells the two apart.
+        self.page.evaluate("window.__softNavSentinel = 42")
+        self.page.evaluate("document.getElementById('sidebar').dataset.probe = 'kept'")
+
+        status_button.click()
+        form = self.page.locator('form[hx-post*="media_save"]')
+        expect(form).to_be_visible()
+
+        form.locator('select[name="status"]').select_option(Status.COMPLETED.value)
+        form.get_by_role("button", name="Update").click()
+
+        # The fragment came back with the new status on it.
+        expect(status_button).to_have_text(Status.COMPLETED.label)
+        # The modal content only exists on demand, so the fresh page has none.
+        expect(self.page.locator('form[hx-post*="media_save"]')).to_have_count(0)
+        # Still the same document, and the shell around the fragment survived.
+        self.assertEqual(self.page.evaluate("window.__softNavSentinel"), 42)
+        self.assertEqual(
+            self.page.evaluate("document.getElementById('sidebar').dataset.probe"),
+            "kept",
+        )
+        self.assertEqual(self.page.locator("#main-content").count(), 1)
+        expect(self.page).to_have_url(f"{self.live_server_url}{detail_path}")
