@@ -85,7 +85,7 @@ class ShellNavigationTest(TestCase):
         self.assertIn('hx-boost="true"', link)
         self.assertIn('hx-target="#main-content"', link)
         self.assertIn('hx-select="#main-content"', link)
-        self.assertIn('hx-swap="innerHTML"', link)
+        self.assertIn('hx-swap="outerHTML"', link)
         self.assertIn('hx-push-url="true"', link)
         self.assertIn("X-Soft-Navigation", link)
 
