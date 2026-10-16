@@ -74,9 +74,6 @@
             {% block sidebar_own_media %}
               <ul class="space-y-1 mb-6">
                 <li>
-                  {# First link migrated to the shell: a boosted click swaps only
-                     the main content block, so the sidebar, the search bar and
-                     the messages stay untouched. #}
                   <a href="{% url 'home' %}"
                      hx-boost="true"
                      hx-target="#main-content"
