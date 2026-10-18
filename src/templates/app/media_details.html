@@ -65,9 +65,10 @@
 
             {# Create Track Modal #}
             <div x-show="createOpen"
-                 class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                 class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                 @click.self="createOpen = false">
               <div class="w-152 max-h-[90vh] px-4 md:px-0 relative z-60"
-                   @click.outside="createOpen = false">
+                   @click.stop>
                 <div id="{% component_id 'track' media %}"></div>
               </div>
             </div>
@@ -75,9 +76,9 @@
 
           {# Track Modal #}
           <div x-show="trackOpen"
-               class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+               class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+               @click.self="trackOpen = false">
             <div class="w-152 max-h-[90vh] px-4 md:px-0 relative z-60"
-                 @click.outside="trackOpen = false"
                  @click.stop>
               {# stop click propagation to avoid resetting the modal because this one doesn't have click once #}
               <div id="{% component_id 'track' media current_instance.id %}"></div>
