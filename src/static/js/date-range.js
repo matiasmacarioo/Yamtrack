@@ -1,12 +1,10 @@
-function dateRangePicker() {
+function dateRangePicker(defaultRange = "Last 12 Months") {
   return {
     isOpen: false,
     activeTab: "predefined",
-    selectedRange: "Last 12 Months",
-    startDate: new Date(new Date().setFullYear(new Date().getFullYear() - 1))
-      .toISOString()
-      .split("T")[0],
-    endDate: new Date().toISOString().split("T")[0],
+    selectedRange: defaultRange,
+    startDate: "",
+    endDate: "",
     customRangeLabel: "",
 
     predefinedRanges: [
@@ -35,6 +33,10 @@ function dateRangePicker() {
 
         // Try to determine which predefined range matches these dates
         this.detectRangeFromDates();
+      } else {
+        // No explicit range in the URL: apply the page's default range so the
+        // custom date inputs match the label.
+        this.updateDatesFromRange(this.selectedRange);
       }
     },
 

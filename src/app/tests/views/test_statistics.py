@@ -188,12 +188,16 @@ class StatisticsViewTests(TestCase):
         self.client.login(**self.credentials)
 
     def test_statistics_view_default_date_range(self):
-        """Test the statistics view with default date range (last year)."""
+        """The statistics view defaults to all time when no range is given."""
         # Call the view
         response = self.client.get(reverse("statistics"))
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "app/statistics.html")
+
+        # All time means no date bounds are applied.
+        self.assertIsNone(response.context["start_date"])
+        self.assertIsNone(response.context["end_date"])
 
         self.assertIn("media_count", response.context)
         self.assertIn("media_type_distribution", response.context)

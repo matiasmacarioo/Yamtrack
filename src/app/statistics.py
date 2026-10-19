@@ -21,18 +21,26 @@ from users.models import WeekStartDayChoices
 logger = logging.getLogger(__name__)
 
 
-def parse_activity_date_range(request):
+def parse_activity_date_range(request, *, default_all_time=False):
     """Parse ``start-date``/``end-date`` params into an aware datetime range.
 
-    Defaults to the last year. ``all`` for both means no range (``None``).
+    Defaults to all time when ``default_all_time`` is set, otherwise to the
+    last year. ``all`` for both means no range (``None``).
     """
     timeformat = "%Y-%m-%d"
     today = timezone.localdate()
+
+    start_date_str = request.GET.get("start-date")
+    end_date_str = request.GET.get("end-date")
+
+    if not start_date_str and not end_date_str and default_all_time:
+        return None, None
+
     # relativedelta clamps Feb 29 to Feb 28 instead of raising ValueError.
     one_year_ago = today - relativedelta(years=1)
 
-    start_date_str = request.GET.get("start-date") or one_year_ago.strftime(timeformat)
-    end_date_str = request.GET.get("end-date") or today.strftime(timeformat)
+    start_date_str = start_date_str or one_year_ago.strftime(timeformat)
+    end_date_str = end_date_str or today.strftime(timeformat)
 
     if start_date_str == "all" and end_date_str == "all":
         return None, None

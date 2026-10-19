@@ -86,7 +86,7 @@
                   @submit="loading = true">
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              {# only searches when the instance opts in, so nothing is grabbed by default #}
+              {# search follows RADARR_SEARCH_ON_ADD, which is on by default #}
               {% if RADARR_SEARCH_ON_ADD %}<input type="hidden" name="search" value="true">{% endif %}
               <button type="submit"
                       class="cursor-pointer rounded-full bg-yellow-600 p-2.5 text-white transition-all duration-200 hover:scale-110 hover:bg-yellow-500 hover:shadow-[0_0_15px_rgba(202,138,4,0.5)] disabled:opacity-75"

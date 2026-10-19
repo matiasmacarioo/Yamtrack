@@ -949,7 +949,10 @@ def delete_history_record(request, media_type, history_id):
 @require_GET
 def statistics(request):
     """Return the statistics page."""
-    start_date, end_date = stats.parse_activity_date_range(request)
+    start_date, end_date = stats.parse_activity_date_range(
+        request,
+        default_all_time=True,
+    )
 
     # Get all user media data in a single operation
     user_media, media_count = stats.get_user_media(

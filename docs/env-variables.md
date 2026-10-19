@@ -91,7 +91,7 @@ Sonarr is an optional, manual-only integration. Setting `SONARR_URL` and `SONARR
 | `SONARR_QUALITY_PROFILE` | Quality profile to add a show with, by exact name (e.g. `4K o 1080p - Upgrades Allowed`) or by numeric id (e.g. `7`). Empty (the default) uses the first profile Sonarr returns.                                                                                    |
 | `SONARR_ROOT_FOLDER`     | Root folder for new shows, either the id or the path (e.g. `D:/Series`). Empty (the default) uses the first root folder Sonarr reports. The value is matched against Sonarr's own folders ignoring slash direction and case, so `D:/Series` and `D:\Series` are equal. |
 | `SONARR_LANGUAGE_PROFILE`| Language profile for Sonarr v3 only (e.g. `English`). Leave empty to leave the field untouched. Ignored on Sonarr v4, which dropped language profiles.                                                                                                             |
-| `SONARR_SEARCH_ON_ADD`   | Default to `False`. Sets the initial state of the **Search** checkbox next to the Add to Sonarr button. `False` only registers the show in Sonarr without grabbing anything; `True` pre-checks the box so a click also queues a search.                              |
+| `SONARR_SEARCH_ON_ADD`   | Defaults to `True`. Sets the initial state of the **Search** checkbox next to the Add to Sonarr button. `True` pre-checks the box so a click also queues a search; `False` only registers the show in Sonarr without grabbing anything.                              |
 
 **What the buttons do.** From a whole series the show is added with every season but the specials monitored; from a season page only that season is monitored. If the show is already in Sonarr, the whole series button fills in any missing seasons and the season button monitors just that season.
 
@@ -111,11 +111,11 @@ Radarr is an optional, manual-only integration. Setting `RADARR_URL` and `RADARR
 | `RADARR_QUALITY_PROFILE`      | Quality profile to add a movie with, by exact name (e.g. `HD - 720p/1080p`) or by numeric id (e.g. `7`). Empty (the default) uses the first profile Radarr returns.                                                                                                 |
 | `RADARR_ROOT_FOLDER`          | Root folder for new movies, either the id or the path (e.g. `D:/Movies`). Empty (the default) uses the first root folder Radarr reports. The value is matched against Radarr's own folders ignoring slash direction and case, so `D:/Movies` and `D:\Movies` are equal. |
 | `RADARR_MINIMUM_AVAILABILITY` | Minimum availability a movie must reach before Radarr grabs it: `announced`, `inCinemas`, `released` or `preDB`. Defaults to `released`, so nothing is grabbed before a movie is actually out.                                                                     |
-| `RADARR_SEARCH_ON_ADD`        | Default to `False`. Sets the initial state of the **Search** checkbox next to the Add to Radarr button. `False` only registers the movie in Radarr without grabbing anything; `True` pre-checks the box so a click also queues a search.                             |
+| `RADARR_SEARCH_ON_ADD`        | Defaults to `True`. Sets the initial state of the **Search** checkbox next to the Add to Radarr button. `True` pre-checks the box so a click also queues a search; `False` only registers the movie in Radarr without grabbing anything.                             |
 
 **What the buttons do.** The button adds the movie to Radarr with the configured quality profile and root folder. If the movie is already in Radarr it is left alone, unless it was unmonitored, in which case monitoring is turned on. There is no bulk "add everything" action: only the button does anything, and only when clicked.
 
-On the home page, movie cards trade their **Activity History** button for an **Add to Radarr** button. The Activity History button is kept for the other media types, which Radarr cannot take.
+On the home page, movie cards trade their **Activity History** button for an **Add to Radarr** button. Unlike the details page there is no checkbox on the card: the click searches when `RADARR_SEARCH_ON_ADD` is on (the default) and only registers the movie when it is off. The Activity History button is kept for the other media types, which Radarr cannot take.
 
 On the details page the Search checkbox is a per-click choice and defaults to `RADARR_SEARCH_ON_ADD`.
 
