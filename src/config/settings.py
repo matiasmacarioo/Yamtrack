@@ -522,6 +522,21 @@ SONARR_LANGUAGE_PROFILE = config("SONARR_LANGUAGE_PROFILE", default="")
 SONARR_SEARCH_ON_ADD = config("SONARR_SEARCH_ON_ADD", default=False, cast=bool)
 SONARR_ENABLED = bool(SONARR_URL and SONARR_API_KEY)
 
+# Radarr integration ("Add to Radarr" action on movies).
+RADARR_URL = config("RADARR_URL", default="").rstrip("/")
+RADARR_API_KEY = config(
+    "RADARR_API_KEY",
+    default=secret("RADARR_API_KEY_FILE", ""),
+)
+RADARR_QUALITY_PROFILE = config("RADARR_QUALITY_PROFILE", default="")
+RADARR_ROOT_FOLDER = config("RADARR_ROOT_FOLDER", default="")
+RADARR_MINIMUM_AVAILABILITY = config(
+    "RADARR_MINIMUM_AVAILABILITY",
+    default="released",
+)
+RADARR_SEARCH_ON_ADD = config("RADARR_SEARCH_ON_ADD", default=False, cast=bool)
+RADARR_ENABLED = bool(RADARR_URL and RADARR_API_KEY)
+
 
 TESTING = False
 

@@ -1,5 +1,6 @@
 """Tests for the Sonarr views."""
 
+import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -214,8 +215,8 @@ class SonarrAddTvViewTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("Could not load", self.messages_of(response))
 
-    def test_htmx_request_returns_204_with_redirect(self):
-        """HTMX callers get a 204 that tells the browser to reload."""
+    def test_htmx_request_returns_204_with_location(self):
+        """HTMX callers get a 204 that tells the shell to soft-navigate."""
         result = sonarr.ArrResult(sonarr.OUTCOME_ADDED, "Breaking Bad was added.")
 
         with (
@@ -231,10 +232,14 @@ class SonarrAddTvViewTest(TestCase):
             )
 
         self.assertEqual(response.status_code, 204)
-        self.assertEqual(response["HX-Redirect"], "/home/")
+        location = json.loads(response["HX-Location"])
+        self.assertEqual(location["path"], "/home/")
+        self.assertEqual(location["target"], "#main-content")
+        self.assertEqual(location["select"], "#main-content")
+        self.assertEqual(location["swap"], "outerHTML show:none")
 
     def test_htmx_defaults_to_root_when_next_is_missing(self):
-        """A missing next value still produces a valid HX-Redirect."""
+        """A missing next value still produces a valid HX-Location path."""
         result = sonarr.ArrResult(sonarr.OUTCOME_ADDED, "added")
 
         with (
@@ -247,7 +252,8 @@ class SonarrAddTvViewTest(TestCase):
             response = self.post(HTTP_HX_REQUEST="true")
 
         self.assertEqual(response.status_code, 204)
-        self.assertEqual(response["HX-Redirect"], "/")
+        location = json.loads(response["HX-Location"])
+        self.assertEqual(location["path"], "/")
 
     def test_non_tmdb_source_does_not_pass_a_tmdb_id(self):
         """Only the TMDB source can offer a TMDB id to Sonarr."""

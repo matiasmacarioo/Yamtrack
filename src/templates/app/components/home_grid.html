@@ -55,6 +55,7 @@
 
           {# TV-level items trade the history button for an explicit Sonarr action #}
           {% sonarr_add_url media.item as sonarr_url %}
+          {% radarr_add_url media.item as radarr_url %}
           {% if sonarr_url and SONARR_ENABLED and media.item.source != Sources.MANUAL.value %}
             <form hx-post="{{ sonarr_url }}"
                   hx-target="#main-content"
@@ -69,6 +70,27 @@
               <button type="submit"
                       class="cursor-pointer rounded-full bg-sky-600 p-2.5 text-white transition-all duration-200 hover:scale-110 hover:bg-sky-500 hover:shadow-[0_0_15px_rgba(14,165,233,0.5)] disabled:opacity-75"
                       title="{% if media.item.media_type == MediaTypes.TV.value %}Add every normal season{% else %}Add season {{ media.item.season_number }}{% endif %} to Sonarr, then search for missing episodes"
+                      :disabled="loading">
+                <span class="flex" :class="{ 'animate-spin': loading }">
+                  {% include "app/icons/folder-plus.svg" with classes="w-4 h-4" %}
+                </span>
+              </button>
+            </form>
+          {% elif radarr_url and RADARR_ENABLED and media.item.source != Sources.MANUAL.value %}
+            {# movies trade the history button for an explicit Radarr action #}
+            <form hx-post="{{ radarr_url }}"
+                  hx-target="#main-content"
+                  hx-select="#main-content"
+                  hx-swap="outerHTML show:none"
+                  x-data="{ loading: false }"
+                  @submit="loading = true">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              {# only searches when the instance opts in, so nothing is grabbed by default #}
+              {% if RADARR_SEARCH_ON_ADD %}<input type="hidden" name="search" value="true">{% endif %}
+              <button type="submit"
+                      class="cursor-pointer rounded-full bg-yellow-600 p-2.5 text-white transition-all duration-200 hover:scale-110 hover:bg-yellow-500 hover:shadow-[0_0_15px_rgba(202,138,4,0.5)] disabled:opacity-75"
+                      title="Add this movie to Radarr{% if RADARR_SEARCH_ON_ADD %}, then search for it{% endif %}"
                       :disabled="loading">
                 <span class="flex" :class="{ 'animate-spin': loading }">
                   {% include "app/icons/folder-plus.svg" with classes="w-4 h-4" %}
@@ -123,14 +145,16 @@
 
     {# only rendered next to a history button, see the button row above #}
     {% if not sonarr_url or not SONARR_ENABLED or media.item.source == Sources.MANUAL.value %}
-      <div x-show="historyOpen"
-           @keydown.escape.window="historyOpen = false"
-           class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div class="relative z-60 max-h-[90vh] w-96 px-4 md:px-0"
-             @click.outside="historyOpen = false">
-          <div id="{{ history_component_id }}"></div>
+      {% if not radarr_url or not RADARR_ENABLED or media.item.source == Sources.MANUAL.value %}
+        <div x-show="historyOpen"
+             @keydown.escape.window="historyOpen = false"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div class="relative z-60 max-h-[90vh] w-96 px-4 md:px-0"
+               @click.outside="historyOpen = false">
+            <div id="{{ history_component_id }}"></div>
+          </div>
         </div>
-      </div>
+      {% endif %}
     {% endif %}
   </div>
 {% endfor %}

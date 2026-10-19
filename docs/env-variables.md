@@ -99,6 +99,26 @@ On the home page, TV cards (a whole show, a season, or an episode) trade their *
 
 On the details and season pages the Search checkbox is a per-click choice and defaults to `SONARR_SEARCH_ON_ADD`.
 
+## Radarr Integration
+
+Radarr is an optional, manual-only integration. Setting `RADARR_URL` and `RADARR_API_KEY` makes an **Add to Radarr** button appear on the movie details page and on every movie card of the home page. Nothing is ever sent to Radarr automatically: tracking or importing a movie never touches it.
+
+| Name                          | Notes                                                                                                                                                                                                                                                             |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RADARR_URL`                  | Base URL of your Radarr instance (e.g. `http://radarr:7878`). When Radarr runs directly on the Docker host rather than in a container, use `http://host.docker.internal:7878`. Trailing slashes are ignored. Empty (the default) disables the integration.         |
+| `RADARR_API_KEY`              | Radarr API key, found under Settings → General → Security. Can be provided as `RADARR_API_KEY_FILE` instead. Both `RADARR_URL` and `RADARR_API_KEY` are required for the button to show up.                                                                        |
+| `RADARR_ENABLED`              | Read-only, derived from `RADARR_URL` and `RADARR_API_KEY`. It is exported to the UI so the button and the Search toggle can be hidden when the integration is not configured. Set it indirectly, not directly.                                                     |
+| `RADARR_QUALITY_PROFILE`      | Quality profile to add a movie with, by exact name (e.g. `HD - 720p/1080p`) or by numeric id (e.g. `7`). Empty (the default) uses the first profile Radarr returns.                                                                                                 |
+| `RADARR_ROOT_FOLDER`          | Root folder for new movies, either the id or the path (e.g. `D:/Movies`). Empty (the default) uses the first root folder Radarr reports. The value is matched against Radarr's own folders ignoring slash direction and case, so `D:/Movies` and `D:\Movies` are equal. |
+| `RADARR_MINIMUM_AVAILABILITY` | Minimum availability a movie must reach before Radarr grabs it: `announced`, `inCinemas`, `released` or `preDB`. Defaults to `released`, so nothing is grabbed before a movie is actually out.                                                                     |
+| `RADARR_SEARCH_ON_ADD`        | Default to `False`. Sets the initial state of the **Search** checkbox next to the Add to Radarr button. `False` only registers the movie in Radarr without grabbing anything; `True` pre-checks the box so a click also queues a search.                             |
+
+**What the buttons do.** The button adds the movie to Radarr with the configured quality profile and root folder. If the movie is already in Radarr it is left alone, unless it was unmonitored, in which case monitoring is turned on. There is no bulk "add everything" action: only the button does anything, and only when clicked.
+
+On the home page, movie cards trade their **Activity History** button for an **Add to Radarr** button. The Activity History button is kept for the other media types, which Radarr cannot take.
+
+On the details page the Search checkbox is a per-click choice and defaults to `RADARR_SEARCH_ON_ADD`.
+
 ## Docker Secrets Support
 
 YamTrack supports reading sensitive configuration values from Docker secrets files. The following environment variables can alternatively be provided as secrets:
@@ -117,6 +137,7 @@ YamTrack supports reading sensitive configuration values from Docker secrets fil
 | `COMICVINE_API`           | `COMICVINE_API_FILE`           |
 | `TRAKT_API`               | `TRAKT_API_FILE`               |
 | `SONARR_API_KEY`          | `SONARR_API_KEY_FILE`          |
+| `RADARR_API_KEY`          | `RADARR_API_KEY_FILE`          |
 | `SIMKL_ID`                | `SIMKL_ID_FILE`                |
 | `SIMKL_SECRET`            | `SIMKL_SECRET_FILE`            |
 | `SOCIALACCOUNT_PROVIDERS` | `SOCIALACCOUNT_PROVIDERS_FILE` |

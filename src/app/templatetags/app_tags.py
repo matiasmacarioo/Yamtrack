@@ -380,6 +380,22 @@ def sonarr_add_url(media):
 
 
 @register.simple_tag
+def radarr_add_url(media):
+    """Return the Radarr "add" URL for a movie-level item.
+
+    Media types Radarr has no equivalent of (TV shows, games, books...) return
+    an empty string, so templates can gate the action with ``{% if radarr_url %}``.
+    """
+    if media.media_type != MediaTypes.MOVIE.value:
+        return ""
+
+    return reverse(
+        "radarr_add_movie",
+        kwargs={"source": media.source, "media_id": media.media_id},
+    )
+
+
+@register.simple_tag
 def media_view_url(view_name, media):
     """Return the modal URL for both metadata and model object cases."""
     is_dict = isinstance(media, dict)

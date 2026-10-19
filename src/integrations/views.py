@@ -21,7 +21,7 @@ from app import helpers as app_helpers
 from app.models import MediaTypes, Sources
 from app.providers import services
 from integrations import exports, tasks
-from integrations.arr import sonarr
+from integrations.arr import radarr, sonarr
 from integrations.imports import anilist, helpers, simkl, trakt
 from integrations.webhooks import emby, jellyfin, plex
 
@@ -675,6 +675,72 @@ def sonarr_add_tv(request, source, media_id, season_number=None):
     if result.outcome == sonarr.OUTCOME_ERROR:
         messages.error(request, result.message)
     elif result.outcome == sonarr.OUTCOME_ALREADY:
+        messages.info(request, result.message)
+    else:
+        messages.success(request, result.message)
+
+    return back
+
+
+@require_POST
+def radarr_add_movie(request, source, media_id):
+    """Add a movie to Radarr.
+
+    This is always an explicit action: tracking a media never calls Radarr,
+    only this endpoint does.
+    """
+    back = _back_to_media(request)
+
+    if not settings.RADARR_ENABLED:
+        messages.error(request, "Radarr is not configured on this instance.")
+        return back
+
+    if source == Sources.MANUAL.value:
+        messages.error(
+            request,
+            "Manual entries cannot be added to Radarr, link the movie to TMDB first.",
+        )
+        return back
+
+    try:
+        metadata = services.get_media_metadata(
+            MediaTypes.MOVIE.value,
+            media_id,
+            source,
+        )
+    except services.ProviderAPIError as error:
+        logger.warning(
+            "Could not load metadata for %s %s: %s",
+            source,
+            media_id,
+            error,
+        )
+        messages.error(request, "Could not load the movie metadata.")
+        return back
+
+    imdb_id = metadata.get("imdb_id") or None
+    try:
+        tmdb_id = int(media_id) if source == Sources.TMDB.value else None
+    except ValueError:
+        tmdb_id = None
+
+    if not tmdb_id and not imdb_id:
+        messages.error(
+            request,
+            "This movie has no TMDB or IMDb id, so it cannot be added to Radarr.",
+        )
+        return back
+
+    result = radarr.add_movie(
+        tmdb_id=tmdb_id,
+        imdb_id=imdb_id,
+        title=metadata.get("title") or "the movie",
+        search=request.POST.get("search") == "true",
+    )
+
+    if result.outcome == radarr.OUTCOME_ERROR:
+        messages.error(request, result.message)
+    elif result.outcome == radarr.OUTCOME_ALREADY:
         messages.info(request, result.message)
     else:
         messages.success(request, result.message)

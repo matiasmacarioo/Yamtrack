@@ -14,6 +14,8 @@ def export_vars(request):  # noqa: ARG001
         "TRACK_TIME": settings.TRACK_TIME,
         "SONARR_ENABLED": settings.SONARR_ENABLED,
         "SONARR_SEARCH_ON_ADD": settings.SONARR_SEARCH_ON_ADD,
+        "RADARR_ENABLED": settings.RADARR_ENABLED,
+        "RADARR_SEARCH_ON_ADD": settings.RADARR_SEARCH_ON_ADD,
     }
 
 

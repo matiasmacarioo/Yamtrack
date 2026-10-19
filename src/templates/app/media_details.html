@@ -374,13 +374,55 @@
           </button>
 
           {# Add to Sonarr #}
-          {% if SONARR_ENABLED and media.source != Sources.MANUAL.value %}
-            {% if media.media_type == MediaTypes.SEASON.value %}
-              {% url 'sonarr_add_tv_season' source=media.source media_id=media.media_id season_number=media.season_number as sonarr_url %}
-            {% else %}
-              {% url 'sonarr_add_tv' source=media.source media_id=media.media_id as sonarr_url %}
+          {% if media.media_type == MediaTypes.TV.value or media.media_type == MediaTypes.SEASON.value %}
+            {% if SONARR_ENABLED and media.source != Sources.MANUAL.value %}
+              {% if media.media_type == MediaTypes.SEASON.value %}
+                {% url 'sonarr_add_tv_season' source=media.source media_id=media.media_id season_number=media.season_number as sonarr_url %}
+              {% else %}
+                {% url 'sonarr_add_tv' source=media.source media_id=media.media_id as sonarr_url %}
+              {% endif %}
+              <form hx-post="{{ sonarr_url }}"
+                    hx-target="#main-content"
+                    hx-select="#main-content"
+                    hx-swap="outerHTML show:none"
+                    x-data="{ loading: false }"
+                    @submit="loading = true">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit"
+                        class="w-full flex items-center gap-x-3 px-4 py-3 text-sm text-gray-200 hover:bg-[#343a40] transition-colors duration-200 cursor-pointer disabled:opacity-75"
+                        :disabled="loading">
+                  <span class="flex items-center justify-center w-8 h-8 rounded-md bg-sky-600/15 text-sky-400 shrink-0">
+                    <span class="flex" :class="{ 'animate-spin': loading }">
+                      {% include "app/icons/folder-plus.svg" with classes="w-4 h-4" %}
+                    </span>
+                  </span>
+                  <span class="font-medium flex-1 text-left">
+                    {% if media.media_type == MediaTypes.SEASON.value %}
+                      Add to Sonarr · S{{ media.season_number }}
+                    {% else %}
+                      Add to Sonarr
+                    {% endif %}
+                  </span>
+                  <label class="flex items-center gap-x-1.5 text-xs text-gray-400 cursor-pointer border-l border-white/5 pl-3 pr-1 -mr-1 py-1"
+                         title="Search for missing episodes after adding/monitoring">
+                    <input type="checkbox"
+                           name="search"
+                           value="true"
+                           {% if SONARR_SEARCH_ON_ADD %}checked{% endif %}
+                           class="rounded bg-[#39404b] border-gray-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+                           @click.stop>
+                    Search
+                  </label>
+                </button>
+              </form>
             {% endif %}
-            <form hx-post="{{ sonarr_url }}"
+          {% endif %}
+
+          {# Add to Radarr #}
+          {% if media.media_type == MediaTypes.MOVIE.value and RADARR_ENABLED and media.source != Sources.MANUAL.value %}
+            {% url 'radarr_add_movie' source=media.source media_id=media.media_id as radarr_url %}
+            <form hx-post="{{ radarr_url }}"
                   hx-target="#main-content"
                   hx-select="#main-content"
                   hx-swap="outerHTML show:none"
@@ -391,25 +433,19 @@
               <button type="submit"
                       class="w-full flex items-center gap-x-3 px-4 py-3 text-sm text-gray-200 hover:bg-[#343a40] transition-colors duration-200 cursor-pointer disabled:opacity-75"
                       :disabled="loading">
-                <span class="flex items-center justify-center w-8 h-8 rounded-md bg-sky-600/15 text-sky-400 shrink-0">
+                <span class="flex items-center justify-center w-8 h-8 rounded-md bg-yellow-600/15 text-yellow-400 shrink-0">
                   <span class="flex" :class="{ 'animate-spin': loading }">
                     {% include "app/icons/folder-plus.svg" with classes="w-4 h-4" %}
                   </span>
                 </span>
-                <span class="font-medium flex-1 text-left">
-                  {% if media.media_type == MediaTypes.SEASON.value %}
-                    Add to Sonarr · S{{ media.season_number }}
-                  {% else %}
-                    Add to Sonarr
-                  {% endif %}
-                </span>
+                <span class="font-medium flex-1 text-left">Add to Radarr</span>
                 <label class="flex items-center gap-x-1.5 text-xs text-gray-400 cursor-pointer border-l border-white/5 pl-3 pr-1 -mr-1 py-1"
-                       title="Search for missing episodes after adding/monitoring">
+                       title="Search for the movie after adding it">
                   <input type="checkbox"
                          name="search"
                          value="true"
-                         {% if SONARR_SEARCH_ON_ADD %}checked{% endif %}
-                         class="rounded bg-[#39404b] border-gray-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+                         {% if RADARR_SEARCH_ON_ADD %}checked{% endif %}
+                         class="rounded bg-[#39404b] border-gray-600 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
                          @click.stop>
                   Search
                 </label>

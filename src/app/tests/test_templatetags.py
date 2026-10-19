@@ -447,3 +447,24 @@ class AppTagsTests(TestCase):
         )
 
         self.assertEqual(app_tags.sonarr_add_url(movie), "")
+
+    def test_radarr_add_url(self):
+        """A movie points at the Radarr endpoint."""
+        movie = Item(
+            media_id="11",
+            source=Sources.TMDB.value,
+            media_type=MediaTypes.MOVIE.value,
+            title="Test Movie",
+        )
+        expected = reverse(
+            "radarr_add_movie",
+            kwargs={"source": Sources.TMDB.value, "media_id": "11"},
+        )
+
+        self.assertEqual(app_tags.radarr_add_url(movie), expected)
+
+    def test_radarr_add_url_is_empty_without_a_radarr_equivalent(self):
+        """Media types Radarr cannot take return an empty string."""
+        self.assertEqual(app_tags.radarr_add_url(self.tv_item), "")
+        self.assertEqual(app_tags.radarr_add_url(self.season_item), "")
+        self.assertEqual(app_tags.radarr_add_url(self.episode_item), "")

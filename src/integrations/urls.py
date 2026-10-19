@@ -61,4 +61,9 @@ urlpatterns = [
         views.sonarr_add_tv,
         name="sonarr_add_tv_season",
     ),
+    path(
+        "radarr/add/<str:source>/<str:media_id>/",
+        views.radarr_add_movie,
+        name="radarr_add_movie",
+    ),
 ]
