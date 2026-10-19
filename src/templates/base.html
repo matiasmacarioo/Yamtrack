@@ -80,11 +80,11 @@
                hx-select-oob="#sidebar-nav,#sidebar-footer"
                hx-push-url="true"
                hx-headers='{"X-Soft-Navigation": "true"}'>
-          <div class="h-16 border-b border-[#2c3136] flex items-center px-6">
+          <div class="h-16 flex items-center px-6">
             <h1 class="text-2xl font-semibold text-gray-100">Yamtrack</h1>
           </div>
           <nav id="sidebar-nav"
-               class="p-4 flex-1 overflow-y-auto"
+               class="p-4 border-t border-[#2c3136] flex-1 overflow-y-auto"
                hx-boost="true"
                @click="isMobileMenuOpen = false">
             {% block sidebar_own_media %}
